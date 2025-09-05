@@ -1,0 +1,88 @@
+================================================================================
+REPORTE DE ANÁLISIS MULTIVARIADO - SIMA MONTERREY
+================================================================================
+
+1. INFORMACIÓN GENERAL
+------------------------------
+• Fecha de análisis: 2025-09-04 20:46
+• Variables analizadas: 15
+• Observaciones: 113,142
+• Estaciones: NOROESTE2, SURESTE3, NORTE2, SUROESTE2, CENTRO
+• Período: 2022-01-01 00:00:00 a 2024-07-31 23:00:00
+• Variables: CO, NO, NO2, NOX, O3, PM10, PM2.5, SO2, PRS, RAINF, RH, SR, TOUT, WSR, WDR
+
+2. ESTADÍSTICAS DESCRIPTIVAS
+-----------------------------------
+Distribución por período del día:
+  • non_peak: 84,866 (75.0%)
+  • morning_peak: 14,141 (12.5%)
+  • evening_peak: 14,135 (12.5%)
+
+Distribución por estación:
+  • NORTE2: 22,630 (20.0%)
+  • SUROESTE2: 22,630 (20.0%)
+  • CENTRO: 22,630 (20.0%)
+  • SURESTE3: 22,627 (20.0%)
+  • NOROESTE2: 22,625 (20.0%)
+
+3. RESULTADOS PCA
+--------------------
+• Componentes calculados: 10
+  - PC1: 24.3% de la varianza
+  - PC2: 17.6% de la varianza
+  - PC3: 8.6% de la varianza
+  - PC4: 7.3% de la varianza
+  - PC5: 6.7% de la varianza
+• Varianza acumulada (PC1-PC3): 50.5%
+• Varianza acumulada (PC1-PC5): 64.4%
+
+Variables más importantes en PC1:
+  • NOX: 0.461
+  • NO: 0.414
+  • NO2: 0.401
+
+Variables más importantes en PC2:
+  • RH: 0.415
+  • SR: -0.381
+  • O3: -0.377
+
+4. RESULTADOS CLUSTERING (K-MEANS)
+----------------------------------------
+• Número óptimo de clusters: 2
+• Silhouette score: 0.329
+• Inercia: 845795.94
+
+Distribución de observaciones por cluster:
+  • Cluster 0: 23,106 (20.4%)
+  • Cluster 1: 90,036 (79.6%)
+
+Caracterización de clusters por período pico:
+  Cluster 0:
+    - evening_peak: 6.0%
+    - morning_peak: 25.1%
+    - non_peak: 68.9%
+  Cluster 1:
+    - evening_peak: 14.2%
+    - morning_peak: 9.3%
+    - non_peak: 76.6%
+
+5. INTERPRETACIÓN Y CONCLUSIONES
+----------------------------------------
+• El análisis PCA permite reducir la dimensionalidad del problema
+  manteniendo la mayor parte de la información relevante.
+• Los clusters identificados pueden representar diferentes
+  condiciones ambientales o patrones de contaminación.
+• La variación temporal (horas pico vs no pico) es un factor
+  importante en la caracterización de la calidad del aire.
+• Las diferencias entre estaciones pueden indicar variaciones
+  espaciales en las fuentes de contaminación.
+
+6. RECOMENDACIONES
+--------------------
+• Analizar más detalladamente los clusters identificados para
+  entender sus características ambientales específicas.
+• Considerar factores meteorológicos adicionales que puedan
+  influir en los patrones de contaminación.
+• Desarrollar modelos predictivos basados en los componentes
+  principales identificados.
+• Validar los resultados con conocimiento experto del dominio.
