@@ -103,6 +103,9 @@ def load_excel_frames(path_pattern: str = "Bases_Datos/f24_clean.xlsx") -> pd.Da
         logger.error(f"Error loading Excel frames: {e}")
         return pd.DataFrame()
 
+
+
+
 def make_temporal_windows(df: pd.DataFrame) -> pd.DataFrame:
     """
     Add temporal window classifications to dataframe.
@@ -491,9 +494,12 @@ def render_eda(df):
     st.markdown("**Insight:** NOX and CO are strongly linked—both from car exhaust. Reducing traffic could lower both.")
     
     # Extended: Time series with slider for date range
-    date_range = st.slider("Select Date Range:", min_value=df['date'].min(), max_value=df['date'].max(), 
-                           value=(df['date'].min(), df['date'].max()))
-    filtered_df = df[(df['date'] >= date_range[0]) & (df['date'] <= date_range[1])]
+    min_date = pd.to_datetime(df['date'].min()).to_pydatetime()
+    max_date = pd.to_datetime(df['date'].max()).to_pydatetime()
+
+    date_range = st.slider("Select Date Range:", min_value=min_date, max_value=max_date, 
+                           value=(min_date, max_date))
+    filtered_df = df[(df['date'] >= pd.Timestamp(date_range[0])) & (df['date'] <= pd.Timestamp(date_range[1]))]
     fig_ts = px.line(filtered_df, x='date', y=['PM10', 'PM2.5'], title="PM Trends Over Time (Slide to Filter)")
     st.plotly_chart(fig_ts, use_container_width=True)
     
@@ -563,92 +569,126 @@ def render_temporal_analysis(models, windows, features):
             st.markdown("We used PCA to reduce dimensions and KMeans to cluster. Variance: PC1 captures traffic-related pollutants.")
     else:
         st.warning("No model for this window yet. Click 'Retrain Models' to update.")
+
 def render_simulator(models: Dict):
-    """Render What-If Simulator section."""
+    """Render What-If Simulator with random/reset that safely update sliders via pending state."""
     st.header("🎮 What-If Simulator")
-    
+
     windows = ['morning_peak', 'midday', 'evening_peak', 'night']
     selected_window = st.selectbox("Select time window for simulation:", windows)
-    
-    st.subheader("Adjust Pollutant Levels")
-    
-    # Get live or historical defaults
-    live_data = fetch_live_data()
-    if not live_data:
-        st.warning("⚠️ Using historical median values (live data unavailable)")
-        # Use historical medians as defaults
-        defaults = {
+
+    # Features + ranges
+    features = ['CO', 'NO', 'NO2', 'NOX', 'O3', 'PM10', 'PM2.5', 'SO2']
+    ranges = {
+        'CO':   (0.0, 2.0, 0.01),
+        'NO':   (0.0, 0.1, 0.001),
+        'NO2':  (0.0, 0.1, 0.001),
+        'NOX':  (0.0, 0.2, 0.001),
+        'O3':   (0.0, 0.1, 0.001),
+        'PM10': (0.0, 150.0, 1.0),
+        'PM2.5':(0.0, 75.0, 0.5),
+        'SO2':  (0.0, 0.02, 0.0001),
+    }
+
+    # --- Init defaults for the current window (once) ---
+    if 'sim_window' not in st.session_state:
+        st.session_state.sim_window = selected_window
+
+    if ('sim_defaults' not in st.session_state) or (selected_window != st.session_state.sim_window):
+        st.session_state.sim_window = selected_window
+        live_data = fetch_live_data()
+        st.session_state.sim_defaults = live_data or {
             'CO': 0.6, 'NO': 0.03, 'NO2': 0.04, 'NOX': 0.07,
             'O3': 0.05, 'PM10': 45.0, 'PM2.5': 20.0, 'SO2': 0.005
         }
-    else:
-        defaults = live_data
-    
-    # Create sliders
-    features = ['CO', 'NO', 'NO2', 'NOX', 'O3', 'PM10', 'PM2.5', 'SO2']
-    ranges = {
-        'CO': (0.0, 2.0, 0.01),
-        'NO': (0.0, 0.1, 0.001),
-        'NO2': (0.0, 0.1, 0.001),
-        'NOX': (0.0, 0.2, 0.001),
-        'O3': (0.0, 0.1, 0.001),
-        'PM10': (0.0, 150.0, 1.0),
-        'PM2.5': (0.0, 75.0, 0.5),
-        'SO2': (0.0, 0.02, 0.0001)
-    }
-    
-    col1, col2 = st.columns(2)
-    input_values = []
-    
-    for i, feature in enumerate(features):
-        with col1 if i < 4 else col2:
-            min_val, max_val, step = ranges[feature]
-            value = st.slider(
-                f"{feature}",
-                min_value=min_val,
-                max_value=max_val,
-                value=defaults.get(feature, (min_val + max_val) / 2),
-                step=step,
-                format=f"%.{len(str(step).split('.')[-1])}f"
-            )
-            input_values.append(value)
-    
-    # Simulate button
-    if st.button("🚀 Simulate", type="primary"):
+        # Pre-seed slider values (only if not yet set)
+        for f in features:
+            key = f"slider_{f}"
+            if key not in st.session_state:
+                st.session_state[key] = float(st.session_state.sim_defaults[f])
+
+    # --- Apply any pending slider values BEFORE creating widgets ---
+    pending = st.session_state.pop("pending_slider_values", None)
+    pending_window = st.session_state.pop("pending_for_window", None)
+    if pending and (pending_window == selected_window):
+        for f, val in pending.items():
+            st.session_state[f"slider_{f}"] = float(val)
+
+    # Helper to generate snapped random values on the step grid
+    def _rand_on_step(mn, mx, step):
+        if step >= 1:
+            return float(np.random.randint(int(mn), int(mx) + 1))
+        n_steps = int(round((mx - mn) / step))
+        return float(mn + np.random.randint(0, n_steps + 1) * step)
+
+    st.subheader("Adjust Pollutant Levels")
+    with st.form(key="simulator_form"):
+        col1, col2 = st.columns(2)
+        for i, feature in enumerate(features):
+            mn, mx, step = ranges[feature]
+            with (col1 if i < 4 else col2):
+                st.slider(
+                    label=feature,
+                    min_value=mn,
+                    max_value=mx,
+                    step=step,
+                    key=f"slider_{feature}",  # value is taken from session_state
+                )
+
+        b1, b2, b3 = st.columns([1, 1, 1])
+        with b1:
+            submitted = st.form_submit_button("🚀 Simulate", type="primary")
+        with b2:
+            randomize = st.form_submit_button("🎲 Random scenario")
+        with b3:
+            reset = st.form_submit_button("↩ Reset defaults")
+
+    # Handle randomize/reset by queueing new values and rerunning
+    if randomize:
+        new_vals = {}
+        for f in features:
+            mn, mx, step = ranges[f]
+            new_vals[f] = _rand_on_step(mn, mx, step)
+        st.session_state["pending_slider_values"] = new_vals
+        st.session_state["pending_for_window"] = selected_window
+        st.rerun()
+
+    if reset:
+        base_vals = {f: float(st.session_state.sim_defaults[f]) for f in features}
+        st.session_state["pending_slider_values"] = base_vals
+        st.session_state["pending_for_window"] = selected_window
+        st.rerun()
+
+    # On submit, read EXACT slider values
+    if submitted:
+        if selected_window not in models:
+            st.warning("No model available for this window. Retrain models first.")
+            return
+
+        input_values = [float(st.session_state[f"slider_{f}"]) for f in features]
         result = simulate_scenario(selected_window, input_values, features)
-        
-        # Display results
+
         st.success("Simulation Complete!")
-        
-        col1, col2, col3 = st.columns(3)
-        with col1:
+        c1, c2, c3 = st.columns(3)
+        with c1:
             st.metric("Predicted Cluster", result['cluster'])
-        with col2:
+        with c2:
             st.metric("Distance to Centroid", f"{result['dist_to_centroid']:.3f}")
-        with col3:
+        with c3:
             st.metric("Time Window", result['window'])
-        
-        # Interpretation
+
         st.info(f"💡 **Recommendation:** {result['interpretation']}")
-        
-        # Comparison plot
+
         if result['nearest_centroid']:
             comparison_df = pd.DataFrame({
                 'Feature': features,
                 'Your Input': input_values,
                 'Cluster Center': [result['nearest_centroid'].get(f, 0) for f in features]
             })
-            
             fig = go.Figure()
-            fig.add_trace(go.Bar(name='Your Input', x=comparison_df['Feature'], 
-                                y=comparison_df['Your Input']))
-            fig.add_trace(go.Bar(name='Cluster Center', x=comparison_df['Feature'], 
-                                y=comparison_df['Cluster Center']))
-            fig.update_layout(
-                title="Input vs. Cluster Center Comparison",
-                barmode='group',
-                hovermode='x unified'
-            )
+            fig.add_trace(go.Bar(name='Your Input', x=comparison_df['Feature'], y=comparison_df['Your Input']))
+            fig.add_trace(go.Bar(name='Cluster Center', x=comparison_df['Feature'], y=comparison_df['Cluster Center']))
+            fig.update_layout(title="Input vs. Cluster Center Comparison", barmode='group', hovermode='x unified')
             st.plotly_chart(fig, use_container_width=True)
 
 def render_insights(df, models):
@@ -674,14 +714,26 @@ def render_insights(df, models):
         st.markdown(f"**Pattern in {selected_window}:** Most data falls into Cluster {np.argmax(model['centers'].mean(axis=1))}—low pollution overall, but watch for traffic spikes.")
     
     # Interactive: Simulate quick scenario
+        # Interactive: Simulate quick scenario (NOx-focused, base on window medians)
     st.subheader("Quick Tip Simulator")
-    pm_slider = st.slider("Hypothetical PM2.5 Level:", 0, 100, 25)
+    nox_slider = st.slider("Hypothetical NOx Level:", 0.0, 0.2, 0.07, 0.001, key="quicktip_nox")
     features_list = ['CO', 'NO', 'NO2', 'NOX', 'O3', 'PM10', 'PM2.5', 'SO2']
-    vector = [0.5, 0.03, 0.04, 0.07, 0.05, 50, 25, 0.005]  # Realistic defaults
-    pm25_idx = features_list.index('PM2.5')
-    vector[pm25_idx] = pm_slider
-    result = simulate_scenario(selected_window, vector, features=features_list, model_dir='models')  # Adjust vector
-    st.markdown(f"If PM2.5 is {pm_slider}, you'd be in {result['interpretation']}")
+    nox_idx = features_list.index('NOX')
+
+    # Base vector from medians of this window to avoid fake -100% deltas
+    base = window_df[features_list].median(numeric_only=True).to_dict()
+    # Fallback in case of NaNs (very edge)
+    for k, v in base.items():
+        if pd.isna(v):
+            base[k] = 0.0
+
+    vector = [float(base[f]) for f in features_list]
+    vector[nox_idx] = float(nox_slider)
+
+    result = simulate_scenario(selected_window, vector, features=features_list, model_dir='models')
+    st.markdown(f"If NOx is {nox_slider:.3f}, you'd be in {result['interpretation']}")
+
+
 # ============================================================================
 # MAIN APP ENTRY
 # ============================================================================

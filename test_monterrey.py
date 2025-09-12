@@ -26,7 +26,12 @@ try:
         load_models,
         simulate_scenario,
         fetch_live_data,
-        generate_interpretation
+        generate_interpretation,
+        render_eda,
+        render_temporal_analysis,
+        render_simulator,
+        render_insights,
+        render_executive_summary
     )
 except ImportError:
     print("Please save the main code as 'monterrey_air.py' to run tests")
@@ -194,14 +199,14 @@ class TestSimulation(unittest.TestCase):
         shuffled = ['PM10','CO','SO2','NOX','NO2','PM2.5','O3','NO']  # wrong order
         x = {f: i+1 for i,f in enumerate(shuffled)}
         # simulate_scenario must follow `feats`, not dict insertion order
-        out = simulate_scenario('midday', x, feats, model_dir=self.temp_dir)
+        out = simulate_scenario('morning_peak', x, feats, model_dir=self.temp_dir)
         self.assertIn('cluster', out)  # if order were wrong, this often raises or becomes unstable
 
     def setUp(self):
         """Set up test environment."""
         self.temp_dir = tempfile.mkdtemp()
         
-        # Create and train simple models
+        # Create and train simple models for morning_peak
         test_df = pd.DataFrame({
             'CO': np.random.uniform(0.3, 1.2, 500),
             'NO': np.random.uniform(0.01, 0.05, 500),
@@ -301,13 +306,9 @@ class TestLiveData(unittest.TestCase):
         """Test API failure handling."""
         mock_get.side_effect = Exception("Network error")
         
-        # Should return None on error (in real implementation)
-        # Current mock always returns data, so this would need adjustment
         result = fetch_live_data()
         
-        # In production, this should be None
-        # For mock implementation, it returns data
-        self.assertIsNotNone(result)
+        self.assertIsNone(result)
 
 class TestInterpretation(unittest.TestCase):
     """Test interpretation generation."""
@@ -342,26 +343,25 @@ class TestInterpretation(unittest.TestCase):
     
     def test_acceptable_levels(self):
         """Test interpretation for acceptable pollution levels."""
-        input_vals = {'PM10': 20, 'O3': 0.02, 'NOX': 0.03, 'CO': 0.4}
+        input_vals = {'PM10': 24, 'O3': 0.029, 'NOX': 0.039, 'CO': 0.49}
         centroid_vals = {'PM10': 25, 'O3': 0.03, 'NOX': 0.04, 'CO': 0.5}
         
         interpretation = generate_interpretation('night', input_vals, centroid_vals)
         
-        self.assertIn('acceptable', interpretation.lower())
+        self.assertIn('normal', interpretation.lower())
 
 class TestAcceptanceCriteria(unittest.TestCase):
     """Test all acceptance criteria from the specification."""
     
     def test_streamlit_sections(self):
-        """✅ Can run streamlit run app.py and see all four sections."""
+        """✅ Can run streamlit run app.py and see all sections."""
         # This would need actual Streamlit testing framework
         # Checking that render functions exist
-        from monterrey_air import render_eda, render_temporal_analysis, render_simulator, render_insights
-        
         self.assertTrue(callable(render_eda))
         self.assertTrue(callable(render_temporal_analysis))
         self.assertTrue(callable(render_simulator))
         self.assertTrue(callable(render_insights))
+        self.assertTrue(callable(render_executive_summary))
     
     def test_model_persistence(self):
         """✅ Clicking Retrain creates/overwrites models/{window}_*.pkl per window."""
@@ -457,7 +457,8 @@ class TestAcceptanceCriteria(unittest.TestCase):
             make_temporal_windows,
             train_and_save_models,
             simulate_scenario,
-            fetch_live_data
+            fetch_live_data,
+            generate_interpretation
         )
         
         functions_to_check = [
@@ -465,7 +466,8 @@ class TestAcceptanceCriteria(unittest.TestCase):
             make_temporal_windows,
             train_and_save_models,
             simulate_scenario,
-            fetch_live_data
+            fetch_live_data,
+            generate_interpretation
         ]
         
         for func in functions_to_check:
