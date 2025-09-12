@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Test Suite for Monterrey Air Quality Analysis System
-Validates core functionality and acceptance criteria
+Suite de Pruebas para el Sistema de Análisis de la Calidad del Aire de Monterrey
+Valida la funcionalidad central y los criterios de aceptación
 """
 
 import unittest
@@ -16,8 +16,8 @@ import warnings
 
 warnings.filterwarnings('ignore')
 
-# Import the main module (assuming it's saved as monterrey_air.py)
-# You may need to adjust this import based on your file structure
+# Importar el módulo principal (asumiendo que está guardado como monterrey_air.py)
+# Puede que necesites ajustar este import según tu estructura de archivos
 try:
     from monterrey_air import (
         load_excel_frames,
@@ -34,14 +34,14 @@ try:
         render_executive_summary
     )
 except ImportError:
-    print("Please save the main code as 'monterrey_air.py' to run tests")
+    print("Por favor guarda el código principal como 'monterrey_air.py' para ejecutar las pruebas")
     sys.exit(1)
 
 class TestDataIO(unittest.TestCase):
-    """Test data loading and temporal window creation."""
+    """Probar la carga de datos y la creación de ventanas temporales."""
     
     def setUp(self):
-        """Create test data."""
+        """Crear datos de prueba."""
         self.test_df = pd.DataFrame({
             'date': pd.date_range('2024-01-01', periods=100, freq='H'),
             'CO': np.random.uniform(0.3, 1.2, 100),
@@ -56,23 +56,23 @@ class TestDataIO(unittest.TestCase):
         })
     
     def test_temporal_windows(self):
-        """Test temporal window assignment."""
+        """Probar la asignación de ventanas temporales."""
         df_with_windows = make_temporal_windows(self.test_df)
         
-        # Check that time_window column was added
+        # Verificar que se añadió la columna time_window
         self.assertIn('time_window', df_with_windows.columns)
         
-        # Check that all windows are assigned
+        # Verificar que todas las ventanas están asignadas
         windows = df_with_windows['time_window'].unique()
         expected_windows = {'morning_peak', 'midday', 'evening_peak', 'night'}
         self.assertTrue(set(windows).issubset(expected_windows))
         
-        # Check specific hour mappings
+        # Verificar mapeos específicos de horas
         test_cases = [
             (7, 'morning_peak'),   # 7 AM
-            (12, 'midday'),         # Noon
-            (18, 'evening_peak'),   # 6 PM
-            (23, 'night')           # 11 PM
+            (12, 'midday'),        # 12 PM
+            (18, 'evening_peak'),  # 6 PM
+            (23, 'night')          # 11 PM
         ]
         
         for hour, expected_window in test_cases:
@@ -80,13 +80,13 @@ class TestDataIO(unittest.TestCase):
             if not hour_data.empty:
                 actual_window = hour_data.iloc[0]['time_window']
                 self.assertEqual(actual_window, expected_window,
-                               f"Hour {hour} should be {expected_window}, got {actual_window}")
+                                 f"La hora {hour} debería ser {expected_window}, pero se obtuvo {actual_window}")
 
 class TestModels(unittest.TestCase):
-    """Test model training, saving, and loading."""
+    """Probar entrenamiento, guardado y carga de modelos."""
     
     def setUp(self):
-        """Create test data and temporary directory."""
+        """Crear datos de prueba y directorio temporal."""
         self.temp_dir = tempfile.mkdtemp()
         self.test_df = pd.DataFrame({
             'date': pd.date_range('2024-01-01', periods=1000, freq='H'),
@@ -104,12 +104,12 @@ class TestModels(unittest.TestCase):
         self.windows = ['morning_peak', 'midday', 'evening_peak', 'night']
     
     def tearDown(self):
-        """Clean up temporary files."""
+        """Limpiar archivos temporales."""
         import shutil
         shutil.rmtree(self.temp_dir, ignore_errors=True)
     
     def test_train_and_save_models(self):
-        """Test model training and persistence."""
+        """Probar entrenamiento y persistencia de modelos."""
         models = train_and_save_models(
             self.test_df,
             self.windows,
@@ -118,22 +118,22 @@ class TestModels(unittest.TestCase):
             force_retrain=True
         )
         
-        # Check that models were created for each window
+        # Verificar que se crearon modelos para cada ventana
         self.assertEqual(len(models), len(self.windows))
         
-        # Check that files were created
+        # Verificar que se crearon archivos
         for window in self.windows:
             scaler_path = os.path.join(self.temp_dir, f"{window}_scaler.pkl")
             kmeans_path = os.path.join(self.temp_dir, f"{window}_kmeans.pkl")
             pca_path = os.path.join(self.temp_dir, f"{window}_pca.pkl")
             
-            self.assertTrue(os.path.exists(scaler_path), f"Scaler not saved for {window}")
-            self.assertTrue(os.path.exists(kmeans_path), f"KMeans not saved for {window}")
-            self.assertTrue(os.path.exists(pca_path), f"PCA not saved for {window}")
+            self.assertTrue(os.path.exists(scaler_path), f"No se guardó el Scaler para {window}")
+            self.assertTrue(os.path.exists(kmeans_path), f"No se guardó KMeans para {window}")
+            self.assertTrue(os.path.exists(pca_path), f"No se guardó PCA para {window}")
     
     def test_load_models(self):
-        """Test model loading from disk."""
-        # First train and save
+        """Probar la carga de modelos desde disco."""
+        # Primero entrenar y guardar
         train_and_save_models(
             self.test_df,
             self.windows,
@@ -142,13 +142,13 @@ class TestModels(unittest.TestCase):
             force_retrain=True
         )
         
-        # Then load
+        # Luego cargar
         loaded_models = load_models(self.windows, model_dir=self.temp_dir)
         
-        # Check that models were loaded
+        # Verificar que se cargaron modelos
         self.assertEqual(len(loaded_models), len(self.windows))
         
-        # Check model components
+        # Verificar componentes del modelo
         for window in self.windows:
             self.assertIn(window, loaded_models)
             model_dict = loaded_models[window]
@@ -159,8 +159,8 @@ class TestModels(unittest.TestCase):
             self.assertIn('explained_variance', model_dict)
     
     def test_model_save_load_roundtrip(self):
-        """Test that models survive save/load cycle."""
-        # Train initial models
+        """Probar que los modelos sobreviven al ciclo guardar/cargar."""
+        # Entrenar modelos iniciales
         models_original = train_and_save_models(
             self.test_df,
             self.windows,
@@ -169,44 +169,51 @@ class TestModels(unittest.TestCase):
             force_retrain=True
         )
         
-        # Load models
+        # Cargar modelos
         models_loaded = load_models(self.windows, model_dir=self.temp_dir)
         
-        # Test prediction consistency
+        # Probar consistencia de predicción
         test_input = np.random.randn(1, len(self.features))
         
         for window in self.windows:
             if window in models_original and window in models_loaded:
-                # Scale with both scalers
+                # Escalar con ambos scalers
                 scaled_orig = models_original[window]['scaler'].transform(test_input)
                 scaled_load = models_loaded[window]['scaler'].transform(test_input)
                 
-                # Check scaling is identical
-                np.testing.assert_array_almost_equal(scaled_orig, scaled_load,
-                                                    err_msg=f"Scaler mismatch for {window}")
+                # Verificar que el escalado sea idéntico
+                np.testing.assert_array_almost_equal(
+                    scaled_orig,
+                    scaled_load,
+                    err_msg=f"Diferencia en Scaler para {window}"
+                )
                 
-                # Check clustering is identical
+                # Verificar que el clustering sea idéntico
                 cluster_orig = models_original[window]['kmeans'].predict(scaled_orig)
                 cluster_load = models_loaded[window]['kmeans'].predict(scaled_load)
                 
-                self.assertEqual(cluster_orig[0], cluster_load[0],
-                               f"Cluster prediction mismatch for {window}")
+                self.assertEqual(
+                    cluster_orig[0],
+                    cluster_load[0],
+                    f"Diferencia en predicción de clúster para {window}"
+                )
 
 class TestSimulation(unittest.TestCase):
-    """Test what-if simulation functionality."""
+    """Probar la funcionalidad del simulador 'what-if'."""
     def test_feature_alignment_order_is_respected(self):
+        """Las features deben respetar el orden especificado, no el del dict."""
         feats = ['CO','NO','NO2','NOX','O3','PM10','PM2.5','SO2']
-        shuffled = ['PM10','CO','SO2','NOX','NO2','PM2.5','O3','NO']  # wrong order
+        shuffled = ['PM10','CO','SO2','NOX','NO2','PM2.5','O3','NO']  # orden incorrecto
         x = {f: i+1 for i,f in enumerate(shuffled)}
-        # simulate_scenario must follow `feats`, not dict insertion order
+        # simulate_scenario debe seguir `feats`, no el orden del dict
         out = simulate_scenario('morning_peak', x, feats, model_dir=self.temp_dir)
-        self.assertIn('cluster', out)  # if order were wrong, this often raises or becomes unstable
+        self.assertIn('cluster', out)  # si el orden fuera incorrecto, a menudo falla o se vuelve inestable
 
     def setUp(self):
-        """Set up test environment."""
+        """Configurar entorno de prueba."""
         self.temp_dir = tempfile.mkdtemp()
         
-        # Create and train simple models for morning_peak
+        # Crear y entrenar modelos simples para morning_peak
         test_df = pd.DataFrame({
             'CO': np.random.uniform(0.3, 1.2, 500),
             'NO': np.random.uniform(0.01, 0.05, 500),
@@ -229,12 +236,12 @@ class TestSimulation(unittest.TestCase):
         )
     
     def tearDown(self):
-        """Clean up."""
+        """Limpiar."""
         import shutil
         shutil.rmtree(self.temp_dir, ignore_errors=True)
     
     def test_simulate_scenario(self):
-        """Test scenario simulation."""
+        """Probar la simulación de escenario."""
         input_vector = [0.8, 0.03, 0.04, 0.07, 0.05, 60, 25, 0.005]
         
         result = simulate_scenario(
@@ -244,32 +251,32 @@ class TestSimulation(unittest.TestCase):
             model_dir=self.temp_dir
         )
         
-        # Check result structure
+        # Verificar estructura del resultado
         self.assertIn('window', result)
         self.assertIn('cluster', result)
         self.assertIn('dist_to_centroid', result)
         self.assertIn('interpretation', result)
         self.assertIn('nearest_centroid', result)
         
-        # Check types
+        # Verificar tipos
         self.assertEqual(result['window'], 'morning_peak')
         self.assertIsInstance(result['cluster'], int)
         self.assertIsInstance(result['dist_to_centroid'], float)
         self.assertIsInstance(result['interpretation'], str)
         
-        # Check cluster is valid
+        # Verificar que el clúster sea válido
         self.assertGreaterEqual(result['cluster'], 0)
-        self.assertLess(result['cluster'], 3)  # We set k=3
+        self.assertLess(result['cluster'], 3)  # configuramos k=3
     
     def test_simulate_with_known_centroid(self):
-        """Test that simulation returns nearest cluster."""
-        # Load the model to get a centroid
+        """Probar que la simulación devuelve el clúster más cercano."""
+        # Cargar el modelo para obtener un centroide
         with open(os.path.join(self.temp_dir, 'morning_peak_kmeans.pkl'), 'rb') as f:
             kmeans = pickle.load(f)
         with open(os.path.join(self.temp_dir, 'morning_peak_scaler.pkl'), 'rb') as f:
             scaler = pickle.load(f)
         
-        # Use first centroid as input (in original scale)
+        # Usar el primer centroide como entrada (en escala original)
         centroid_scaled = kmeans.cluster_centers_[0].reshape(1, -1)
         centroid_original = scaler.inverse_transform(centroid_scaled)[0]
         
@@ -280,69 +287,69 @@ class TestSimulation(unittest.TestCase):
             model_dir=self.temp_dir
         )
         
-        # Should predict cluster 0
+        # Debería predecir el clúster 0
         self.assertEqual(result['cluster'], 0)
-        # Distance should be very small
+        # La distancia debería ser muy pequeña
         self.assertLess(result['dist_to_centroid'], 0.1)
 
 class TestLiveData(unittest.TestCase):
-    """Test live data fetching with fallback."""
+    """Probar la obtención de datos en vivo con respaldo."""
     
     @patch('requests.get')
     def test_fetch_live_data_success(self, mock_get):
-        """Test successful API call."""
-        # For now, since we're using mock data, just test the function runs
+        """Probar llamada exitosa al API."""
+        # Por ahora, como estamos usando datos simulados, solo probamos que la función corre
         result = fetch_live_data()
         
         self.assertIsNotNone(result)
         self.assertIsInstance(result, dict)
         
-        # Check all pollutants are present
+        # Verificar que estén todos los contaminantes
         expected_keys = {'CO', 'NO', 'NO2', 'NOX', 'O3', 'PM10', 'PM2.5', 'SO2'}
         self.assertEqual(set(result.keys()), expected_keys)
     
     @patch('requests.get')
     def test_fetch_live_data_failure(self, mock_get):
-        """Test API failure handling."""
-        mock_get.side_effect = Exception("Network error")
+        """Probar manejo de fallo del API."""
+        mock_get.side_effect = Exception("Error de red")
         
         result = fetch_live_data()
         
         self.assertIsNone(result)
 
 class TestInterpretation(unittest.TestCase):
-    """Test interpretation generation."""
+    """Probar la generación de interpretaciones."""
     
     def test_high_pm_interpretation(self):
-        """Test interpretation for high PM levels."""
+        """Probar interpretación para niveles altos de PM."""
         input_vals = {'PM10': 70, 'PM2.5': 30, 'O3': 0.03}
         centroid_vals = {'PM10': 50, 'PM2.5': 20, 'O3': 0.04}
         
         interpretation = generate_interpretation('midday', input_vals, centroid_vals)
         
         self.assertIn('PM', interpretation)
-        self.assertIn('dust', interpretation.lower())
+        self.assertIn('polvo', interpretation.lower())
     
     def test_high_ozone_midday(self):
-        """Test interpretation for high ozone at midday."""
+        """Probar interpretación para ozono alto al mediodía."""
         input_vals = {'O3': 0.07, 'PM10': 30}
         centroid_vals = {'O3': 0.04, 'PM10': 40}
         
         interpretation = generate_interpretation('midday', input_vals, centroid_vals)
         
-        self.assertIn('ozone', interpretation.lower())
+        self.assertIn('ozono', interpretation.lower())
     
     def test_traffic_peak_interpretation(self):
-        """Test interpretation for traffic peaks."""
+        """Probar interpretación para picos de tráfico."""
         input_vals = {'NOX': 0.10, 'CO': 1.0}
         centroid_vals = {'NOX': 0.05, 'CO': 0.5}
         
         interpretation = generate_interpretation('morning_peak', input_vals, centroid_vals)
         
-        self.assertIn('traffic', interpretation.lower())
+        self.assertIn('tráfico', interpretation.lower())
     
     def test_acceptable_levels(self):
-        """Test interpretation for acceptable pollution levels."""
+        """Probar interpretación para niveles aceptables de contaminación."""
         input_vals = {'PM10': 24, 'O3': 0.029, 'NOX': 0.039, 'CO': 0.49}
         centroid_vals = {'PM10': 25, 'O3': 0.03, 'NOX': 0.04, 'CO': 0.5}
         
@@ -351,12 +358,12 @@ class TestInterpretation(unittest.TestCase):
         self.assertIn('normal', interpretation.lower())
 
 class TestAcceptanceCriteria(unittest.TestCase):
-    """Test all acceptance criteria from the specification."""
+    """Probar todos los criterios de aceptación de la especificación."""
     
     def test_streamlit_sections(self):
-        """✅ Can run streamlit run app.py and see all sections."""
-        # This would need actual Streamlit testing framework
-        # Checking that render functions exist
+        """✅ Se puede ejecutar `streamlit run app.py` y ver todas las secciones."""
+        # Esto requeriría un framework de pruebas para Streamlit
+        # Verificando que existen las funciones de render
         self.assertTrue(callable(render_eda))
         self.assertTrue(callable(render_temporal_analysis))
         self.assertTrue(callable(render_simulator))
@@ -364,7 +371,7 @@ class TestAcceptanceCriteria(unittest.TestCase):
         self.assertTrue(callable(render_executive_summary))
     
     def test_model_persistence(self):
-        """✅ Clicking Retrain creates/overwrites models/{window}_*.pkl per window."""
+        """✅ Al hacer clic en Retrain se crean/sobrescriben models/{window}_*.pkl por ventana."""
         temp_dir = tempfile.mkdtemp()
         
         test_df = pd.DataFrame({
@@ -381,22 +388,22 @@ class TestAcceptanceCriteria(unittest.TestCase):
         
         features = ['CO', 'NO', 'NO2', 'NOX', 'O3', 'PM10', 'PM2.5', 'SO2']
         
-        # First training
+        # Primer entrenamiento
         train_and_save_models(test_df, ['morning_peak'], features, out_dir=temp_dir)
         
-        # Check files exist
+        # Verificar existencia de archivos
         self.assertTrue(os.path.exists(os.path.join(temp_dir, 'morning_peak_scaler.pkl')))
         self.assertTrue(os.path.exists(os.path.join(temp_dir, 'morning_peak_kmeans.pkl')))
         
-        # Get modification time
+        # Obtener tiempo de modificación
         first_mtime = os.path.getmtime(os.path.join(temp_dir, 'morning_peak_scaler.pkl'))
         
-        # Retrain
+        # Reentrenar
         import time
-        time.sleep(0.1)  # Ensure different timestamp
+        time.sleep(0.1)  # Asegurar timestamp distinto
         train_and_save_models(test_df, ['morning_peak'], features, out_dir=temp_dir, force_retrain=True)
         
-        # Check files were overwritten
+        # Verificar que se sobrescribieron los archivos
         second_mtime = os.path.getmtime(os.path.join(temp_dir, 'morning_peak_scaler.pkl'))
         self.assertGreater(second_mtime, first_mtime)
         
@@ -404,10 +411,10 @@ class TestAcceptanceCriteria(unittest.TestCase):
         shutil.rmtree(temp_dir, ignore_errors=True)
     
     def test_simulation_returns_cluster(self):
-        """✅ Simulate returns a cluster and a plain-English recommendation."""
+        """✅ La simulación regresa un clúster y una recomendación en lenguaje natural."""
         temp_dir = tempfile.mkdtemp()
         
-        # Setup
+        # Configuración
         test_df = pd.DataFrame({
             'CO': np.random.randn(100),
             'NO': np.random.randn(100),
@@ -423,35 +430,35 @@ class TestAcceptanceCriteria(unittest.TestCase):
         features = ['CO', 'NO', 'NO2', 'NOX', 'O3', 'PM10', 'PM2.5', 'SO2']
         train_and_save_models(test_df, ['midday'], features, out_dir=temp_dir)
         
-        # Simulate
+        # Simular
         result = simulate_scenario('midday', [0.5] * 8, features, model_dir=temp_dir)
         
-        # Check cluster
+        # Verificar clúster
         self.assertIsInstance(result['cluster'], int)
         self.assertGreaterEqual(result['cluster'], 0)
         
-        # Check recommendation
+        # Verificar recomendación
         self.assertIsInstance(result['interpretation'], str)
-        self.assertGreater(len(result['interpretation']), 10)  # Not empty
+        self.assertGreater(len(result['interpretation']), 10)  # No vacío
         
         import shutil
         shutil.rmtree(temp_dir, ignore_errors=True)
     
     def test_network_fallback(self):
-        """✅ With network disabled, no crash; app falls back to historical medians."""
-        # Test that fetch_live_data returns None or defaults on error
+        """✅ Con la red deshabilitada, no hay crash; la app recurre a medianas históricas."""
+        # Probar que fetch_live_data devuelve None o valores por defecto en error
         with patch('requests.get') as mock_get:
-            mock_get.side_effect = Exception("Network error")
+            mock_get.side_effect = Exception("Error de red")
             
-            # In production code, this should return None
-            # Current mock returns defaults
+            # En código de producción, esto debería devolver None
+            # El mock actual devuelve valores por defecto
             result = fetch_live_data()
             
-            # Should not raise exception
-            self.assertTrue(True)  # If we get here, no crash
+            # No debería lanzar excepción
+            self.assertTrue(True)  # Si llegamos aquí, no hubo crash
     
     def test_functions_have_docstrings(self):
-        """✅ Functions have docstrings; top-level code is modular."""
+        """✅ Las funciones tienen docstrings; el código de alto nivel es modular."""
         from monterrey_air import (
             load_excel_frames,
             make_temporal_windows,
@@ -471,9 +478,9 @@ class TestAcceptanceCriteria(unittest.TestCase):
         ]
         
         for func in functions_to_check:
-            self.assertIsNotNone(func.__doc__, f"{func.__name__} missing docstring")
-            self.assertGreater(len(func.__doc__), 10, f"{func.__name__} has too short docstring")
+            self.assertIsNotNone(func.__doc__, f"{func.__name__} sin docstring")
+            self.assertGreater(len(func.__doc__), 10, f"El docstring de {func.__name__} es demasiado corto")
 
 if __name__ == '__main__':
-    # Run tests
+    # Ejecutar pruebas
     unittest.main(verbosity=2)
