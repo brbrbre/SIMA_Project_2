@@ -50,11 +50,15 @@ def render_executive_summary(df):
     # Métricas clave (inventadas con base en datos típicos; calcula a partir de tu df)
     avg_pm25 = df['PM2.5'].mean()
     max_o3 = df['O3'].max()
+
     col1, col2, col3 = st.columns(3)
     col1.metric("PM2.5 promedio (Partículas finas)", f"{avg_pm25:.1f} µg/m³", "Moderado" if avg_pm25 < 25 else "No saludable")
-    col2.metric("Pico de Ozono (O3)", f"{max_o3:.3f} ppb", "Alto al mediodía")
+    col2.metric("Pico de Ozono (O3) historia", f"{max_o3:.3f} ppb", max_info)
     col3.metric("Peor ventana horaria", "Pico vespertino", "Basado en NOX/CO por tráfico")
-    
+    max_info = df.loc[df['O3'].idxmax(), ['timestamp', 'station', 'O3']]
+    print(max_info)
+
+
     # Serie temporal interactiva (todos los contaminantes en el tiempo)
     fig_ts = px.line(df, x='date', y=['O3', 'NOX', 'CO'], 
                      title="Tendencias de contaminantes en el tiempo (Pasa el mouse para detalles, haz zoom para explorar)")
