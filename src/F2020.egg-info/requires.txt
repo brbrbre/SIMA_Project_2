@@ -1,5 +1,8 @@
 numpy
 matplotlib
-pyqt6
 scipy
 pandas
+streamlit
+scikit-learn
+plotly
+requests

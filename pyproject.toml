@@ -1,8 +1,3 @@
-# pyproject.toml
-[build-system]
-requires = ["setuptools", "wheel"]
-build-backend = "setuptools.build_meta"
-
 [project]
 name = "F2020"
 version = "0.1.0"
@@ -10,20 +5,15 @@ description = "Paquete de apoyo para el curso F2020 Ecuaciones Diferenciales par
 authors = [
   { name = "Raul Gomez", email = "rgomez@tec.mx" }
 ]
+requires-python = ">=3.11,<3.12"
+
 dependencies = [
   "numpy",
   "matplotlib",
-  "pyqt6",
   "scipy",
   "pandas",
+  "streamlit",
+  "scikit-learn",
+  "plotly",
+  "requests"
 ]
-
-[project.scripts]
-
-
-[tool.setuptools]
-package-dir = {"" = "src"}
-
-[tool.setuptools.packages.find]
-where = ["src"]
-

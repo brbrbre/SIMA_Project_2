@@ -3,8 +3,12 @@ Name: F2020
 Version: 0.1.0
 Summary: Paquete de apoyo para el curso F2020 Ecuaciones Diferenciales para la Física
 Author-email: Raul Gomez <rgomez@tec.mx>
+Requires-Python: <3.12,>=3.11
 Requires-Dist: numpy
 Requires-Dist: matplotlib
-Requires-Dist: pyqt6
 Requires-Dist: scipy
 Requires-Dist: pandas
+Requires-Dist: streamlit
+Requires-Dist: scikit-learn
+Requires-Dist: plotly
+Requires-Dist: requests
