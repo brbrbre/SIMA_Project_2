@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-Monterrey Air Quality Analysis System
-Senior Python Engineer & Data Science Lead Implementation
-Python 3.12 compatible with Streamlit dashboard
+Sistema de Análisis de Calidad del Aire de Monterrey
+Implementación por Líder de Ingeniería Senior en Python y Ciencia de Datos
+Compatible con Python 3.12 y tablero Streamlit
 """
 
 import os
@@ -28,7 +28,7 @@ import warnings
 
 warnings.filterwarnings('ignore')
 
-# Configure logging
+# Configurar logging
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s'
@@ -36,47 +36,48 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # ============================================================================
-# DATA I/O MODULE
+# MÓDULO DE I/O DE DATOS
 # ============================================================================
 
 def render_executive_summary(df):
-    st.title("Executive Summary: Monterrey Air Quality Overview")
+    st.title("Resumen Ejecutivo: Panorama de la Calidad del Aire en Monterrey")
     st.markdown("""
-    Welcome! This summary highlights key air quality trends in Monterrey. 
-    Air quality affects health—high PM levels can cause respiratory issues, while ozone (O3) is worse in sunny midday hours.
-    Use the interactive charts below to explore.
+    ¡Bienvenida/o! Este resumen destaca las tendencias clave de la calidad del aire en Monterrey. 
+    La calidad del aire afecta la salud: niveles altos de PM pueden causar problemas respiratorios, mientras que el ozono (O3) empeora al mediodía soleado.
+    Usa los gráficos interactivos de abajo para explorar.
     """)
     
-    # Key metrics (invented based on typical data; compute from your df)
+    # Métricas clave (inventadas con base en datos típicos; calcula a partir de tu df)
     avg_pm25 = df['PM2.5'].mean()
     max_o3 = df['O3'].max()
     col1, col2, col3 = st.columns(3)
-    col1.metric("Average PM2.5 (Fine Particles)", f"{avg_pm25:.1f} µg/m³", "Moderate" if avg_pm25 < 25 else "Unhealthy")
-    col2.metric("Peak Ozone (O3)", f"{max_o3:.3f} ppm", "High in Midday")
-    col3.metric("Worst Time Window", "Evening Peak", "Based on NOX/CO from traffic")
+    col1.metric("PM2.5 promedio (Partículas finas)", f"{avg_pm25:.1f} µg/m³", "Moderado" if avg_pm25 < 25 else "No saludable")
+    col2.metric("Pico de Ozono (O3)", f"{max_o3:.3f} ppm", "Alto al mediodía")
+    col3.metric("Peor ventana horaria", "Pico vespertino", "Basado en NOX/CO por tráfico")
     
-    # Interactive time series chart (all pollutants over time)
+    # Serie temporal interactiva (todos los contaminantes en el tiempo)
     fig_ts = px.line(df, x='date', y=['PM2.5', 'O3', 'NOX', 'CO'], 
-                     title="Pollutant Trends Over Time (Hover for Details, Zoom to Explore)")
+                     title="Tendencias de contaminantes en el tiempo (Pasa el mouse para detalles, haz zoom para explorar)")
     fig_ts.update_layout(hovermode="x unified")
     st.plotly_chart(fig_ts, use_container_width=True)
     
-    # Interactive pie chart for pollution sources (invented percentages; base on cluster insights or real data)
-    sources = {'Traffic (NOX/CO)': 45, 'Dust/Industry (PM)': 30, 'Ozone Formation': 15, 'Other': 10}
+    # Gráfica de pastel interactiva para fuentes de contaminación (porcentajes de ejemplo; basa en clusters o datos reales)
+    sources = {'Tráfico (NOX/CO)': 45, 'Polvo/Industria (PM)': 30, 'Formación de ozono': 15, 'Otras': 10}
     fig_pie = px.pie(names=list(sources.keys()), values=list(sources.values()), 
-                     title="Estimated Pollution Sources (Click to Isolate)")
+                     title="Fuentes estimadas de contaminación (Haz clic para aislar)")
     st.plotly_chart(fig_pie, use_container_width=True)
     
-    st.markdown("**Quick Insight:** Air quality dips during peaks due to traffic. Scroll down for deeper analysis.")
+    st.markdown("**Insight rápido:** La calidad del aire cae en los picos por el tráfico. Desplázate para ver análisis más profundo.")
+
 def load_excel_frames(path_pattern: str = "Bases_Datos/f24_clean.xlsx") -> pd.DataFrame:
     """
-    Load Excel files with multiple sheets (stations) and combine them.
+    Cargar archivos de Excel con múltiples hojas (estaciones) y combinarlos.
     
     Args:
-        path_pattern: Path to Excel file
+        path_pattern: Ruta al archivo de Excel
         
     Returns:
-        Combined DataFrame with all stations
+        DataFrame combinado con todas las estaciones
     """
     try:
         excel_data = pd.read_excel(path_pattern, sheet_name=None)
@@ -86,7 +87,7 @@ def load_excel_frames(path_pattern: str = "Bases_Datos/f24_clean.xlsx") -> pd.Da
             df = df.copy()
             df['station'] = station
             
-            # Convert date if in epoch format
+            # Convertir fecha si está en formato epoch
             if 'date' in df.columns:
                 if df['date'].dtype in ['float64', 'int64']:
                     df['date'] = pd.to_datetime(df['date'], unit='s')
@@ -96,32 +97,29 @@ def load_excel_frames(path_pattern: str = "Bases_Datos/f24_clean.xlsx") -> pd.Da
             frames.append(df)
         
         combined = pd.concat(frames, ignore_index=True)
-        logger.info(f"Loaded {len(excel_data)} stations with {len(combined)} total records")
+        logger.info(f"Se cargaron {len(excel_data)} estaciones con {len(combined)} registros en total")
         return combined
     
     except Exception as e:
-        logger.error(f"Error loading Excel frames: {e}")
+        logger.error(f"Error al cargar archivos de Excel: {e}")
         return pd.DataFrame()
-
-
-
 
 def make_temporal_windows(df: pd.DataFrame) -> pd.DataFrame:
     """
-    Add temporal window classifications to dataframe.
+    Agregar clasificaciones de ventanas temporales al DataFrame.
     
     Args:
-        df: Input DataFrame with 'date' column
+        df: DataFrame de entrada con la columna 'date'
         
     Returns:
-        DataFrame with 'time_window' column added
+        DataFrame con la columna 'time_window' agregada
     """
     df = df.copy()
     
     if 'date' in df.columns:
         df['hour'] = pd.to_datetime(df['date']).dt.hour
         
-        # Define time windows
+        # Definir ventanas horarias
         conditions = [
             (df['hour'] >= 6) & (df['hour'] < 10),   # morning_peak
             (df['hour'] >= 10) & (df['hour'] < 16),  # midday
@@ -135,7 +133,7 @@ def make_temporal_windows(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 # ============================================================================
-# MODELS MODULE
+# MÓDULO DE MODELOS
 # ============================================================================
 
 def train_and_save_models(
@@ -147,18 +145,18 @@ def train_and_save_models(
     force_retrain: bool = False
 ) -> Dict[str, Dict[str, Any]]:
     """
-    Train and persist StandardScaler and KMeans models per time window.
+    Entrenar y persistir modelos StandardScaler y KMeans por ventana horaria.
     
     Args:
-        df: DataFrame with time_window and feature columns
-        windows: List of time window names
-        features: List of feature columns to use
-        out_dir: Directory to save models
-        k_by_window: Number of clusters (dict per window or single int)
-        force_retrain: Force retraining even if models exist
+        df: DataFrame con columnas time_window y features
+        windows: Lista de ventanas horarias
+        features: Lista de columnas a usar como características
+        out_dir: Directorio donde guardar los modelos
+        k_by_window: Número de clusters (dict por ventana o un entero único)
+        force_retrain: Forzar reentrenamiento aunque existan modelos
         
     Returns:
-        Dictionary with trained models per window
+        Diccionario con modelos entrenados por ventana
     """
     os.makedirs(out_dir, exist_ok=True)
     models = {}
@@ -171,9 +169,9 @@ def train_and_save_models(
         kmeans_path = os.path.join(out_dir, f"{window}_kmeans.pkl")
         pca_path = os.path.join(out_dir, f"{window}_pca.pkl")
         
-        # Check if models exist and force_retrain is False
+        # Revisar si existen modelos y force_retrain es False
         if not force_retrain and all(os.path.exists(p) for p in [scaler_path, kmeans_path, pca_path]):
-            logger.info(f"Loading existing models for {window}")
+            logger.info(f"Cargando modelos existentes para {window}")
             with open(scaler_path, 'rb') as f:
                 scaler = pickle.load(f)
             with open(kmeans_path, 'rb') as f:
@@ -188,29 +186,29 @@ def train_and_save_models(
                 "explained_variance": pca.explained_variance_ratio_
             }
         else:
-            logger.info(f"Training new models for {window}")
+            logger.info(f"Entrenando nuevos modelos para {window}")
             
-            # Filter data for this window
+            # Filtrar datos para esta ventana
             window_df = df[df['time_window'] == window][features].dropna()
             
             if len(window_df) < 10:
-                logger.warning(f"Insufficient data for {window} (n={len(window_df)})")
+                logger.warning(f"Datos insuficientes para {window} (n={len(window_df)})")
                 continue
             
-            # Train scaler
+            # Entrenar scaler
             scaler = StandardScaler()
             scaled_data = scaler.fit_transform(window_df)
             
-            # Train PCA
+            # Entrenar PCA
             pca = PCA(n_components=min(2, len(features)))
             pca_data = pca.fit_transform(scaled_data)
             
-            # Train KMeans
+            # Entrenar KMeans
             k = min(k_by_window.get(window, 4), len(window_df) // 10)
             kmeans = KMeans(n_clusters=k, random_state=42, n_init=10)
             kmeans.fit(scaled_data)
             
-            # Save models
+            # Guardar modelos
             with open(scaler_path, 'wb') as f:
                 pickle.dump(scaler, f)
             with open(kmeans_path, 'wb') as f:
@@ -230,14 +228,14 @@ def train_and_save_models(
 
 def load_models(windows: List[str], model_dir: str = "models") -> Dict[str, Dict[str, Any]]:
     """
-    Load saved models from disk.
+    Cargar modelos guardados desde disco.
     
     Args:
-        windows: List of time window names
-        model_dir: Directory containing saved models
+        windows: Lista de ventanas horarias
+        model_dir: Directorio que contiene los modelos guardados
         
     Returns:
-        Dictionary with loaded models per window
+        Diccionario con modelos cargados por ventana
     """
     models = {}
     
@@ -262,7 +260,7 @@ def load_models(windows: List[str], model_dir: str = "models") -> Dict[str, Dict
                 "explained_variance": pca.explained_variance_ratio_
             }
         except Exception as e:
-            logger.warning(f"Could not load models for {window}: {e}")
+            logger.warning(f"No se pudieron cargar modelos para {window}: {e}")
     
     return models
 
@@ -271,15 +269,15 @@ def simulate_scenario(window: str,
                       features,
                       model_dir: str = "models"):
     """
-    Robust wrapper:
-    - Accepts dict OR list.
-    - Respects feature order.
-    - Scales before predict.
-    - Returns cluster, distance, centroid and narrative.
+    Envoltura robusta:
+    - Acepta dict O lista.
+    - Respeta el orden de features.
+    - Estandariza antes de predecir.
+    - Regresa clúster, distancia, centroide y narrativa.
     """
     import os, pickle, numpy as np
 
-    # load
+    # cargar
     with open(os.path.join(model_dir, f"{window}_scaler.pkl"), "rb") as f:
         scaler = pickle.load(f)
     with open(os.path.join(model_dir, f"{window}_kmeans.pkl"), "rb") as f:
@@ -287,18 +285,18 @@ def simulate_scenario(window: str,
     with open(os.path.join(model_dir, f"{window}_pca.pkl"), "rb") as f:
         pca = pickle.load(f)
 
-    # input vector in correct order
+    # vector de entrada en el orden correcto
     if isinstance(input_values, dict):
         x = np.array([[float(input_values[f]) for f in features]])
     else:
-        assert len(input_values) == len(features), "Feature length mismatch."
+        assert len(input_values) == len(features), "Desajuste en la longitud de features."
         x = np.array([input_values], dtype=float)
 
     x_scaled = scaler.transform(x)
     lab = int(kmeans.predict(x_scaled)[0])
     dist = float(np.linalg.norm(x_scaled - kmeans.cluster_centers_[lab]))
 
-    # nearest centroid in original scale
+    # centroide más cercano en escala original
     cent_scaled = kmeans.cluster_centers_[lab].reshape(1, -1)
     cent_orig = scaler.inverse_transform(cent_scaled)[0]
     centroid_dict = {f: float(v) for f, v in zip(features, cent_orig)}
@@ -317,40 +315,40 @@ def generate_interpretation(window: str,
                             sample: dict,
                             centroid: dict) -> str:
     """
-    Return a plain-English explanation of the simulated air-quality pattern.
+    Devolver una explicación clara, en lenguaje natural, del patrón de calidad del aire simulado.
 
-    The message has three parts:
-    1) What today's pattern looks like (profile label in human terms)
-    2) Why we think that (which pollutants are most off vs the typical day)
-    3) What to do (practical actions a city or company can take)
+    El mensaje tiene tres partes:
+    1) Cómo luce el patrón de hoy (etiqueta del perfil en términos humanos)
+    2) Por qué lo creemos (qué contaminantes se desvían más vs. un día típico)
+    3) Qué hacer (acciones prácticas para ciudad o empresa)
 
-    Parameters
+    Parámetros
     ----------
     window : {'morning_peak','midday','evening_peak','night'}
-        Time-of-day bucket.
+        Bloque horario del día.
     sample : dict
-        User/input readings, e.g. {'PM10': 70, 'PM2.5': 30, 'O3': 0.03, ...}
+        Lecturas de entrada del usuario, p. ej. {'PM10': 70, 'PM2.5': 30, 'O3': 0.03, ...}
     centroid : dict
-        Typical values for the predicted cluster, same keys as `sample`.
+        Valores típicos para el clúster predicho, con las mismas llaves que `sample`.
 
     Returns
     -------
     str
-        Human-friendly narrative.
+        Narrativa para personas no técnicas.
     """
-    # 1) lay terms for pollutants
+    # 1) términos comprensibles para contaminantes
     nice = {
-        'CO': 'carbon monoxide (tailpipe indicator)',
-        'NO': 'nitric oxide (fresh traffic exhaust)',
-        'NO2': 'nitrogen dioxide (traffic/combustion)',
-        'NOX': 'NOx (overall traffic/combustion mix)',
-        'O3': 'ozone (sunlight + exhaust reaction)',
-        'PM10': 'coarse dust (PM10)',
-        'PM2.5': 'fine particles (PM2.5, health-relevant)',
-        'SO2': 'sulfur dioxide (industrial/fuel quality)'
+        'CO': 'monóxido de carbono (indicador de escape vehicular)',
+        'NO': 'óxido nítrico (emisión fresca de tráfico)',
+        'NO2': 'dióxido de nitrógeno (tráfico/combustión)',
+        'NOX': 'NOx (mezcla global de tráfico/combustión)',
+        'O3': 'ozono (reacción de luz solar + emisiones)',
+        'PM10': 'polvo grueso (PM10)',
+        'PM2.5': 'partículas finas (PM2.5, relevantes para salud)',
+        'SO2': 'dióxido de azufre (industrial/calidad de combustible)'
     }
 
-    # 2) relative deviations (percent) from the typical day for this cluster
+    # 2) desviaciones relativas (porcentaje) vs. el día típico para este clúster
     deltas = {}
     for k in centroid.keys():
         c = float(centroid[k])
@@ -360,95 +358,93 @@ def generate_interpretation(window: str,
         else:
             deltas[k] = (s - c) / abs(c)
 
-    # 3) pick the top 2–3 “drivers” by absolute deviation
+    # 3) elegir los 2–3 “drivers” principales por desviación absoluta
     drivers = sorted(deltas.items(), key=lambda kv: abs(kv[1]), reverse=True)[:3]
 
-    # 4) pick a simple label by window + signal
-    label = "typical conditions"
+    # 4) etiqueta simple por ventana + señal
+    label = "condiciones típicas"
     if window in ("morning_peak", "evening_peak"):
         if deltas.get('NOX', 0) > 0.20 or deltas.get('CO', 0) > 0.20:
-            label = "traffic-driven spike"
+            label = "pico impulsado por tráfico"
     if window == "midday":
         if deltas.get('O3', 0) > 0.20:
-            label = "photochemical (ozone) build-up"
+            label = "acumulación fotoquímica (ozono)"
         if deltas.get('PM10', 0) > 0.25 and deltas.get('O3', 0) <= 0.20:
-            label = "dust-dominated day"
+            label = "día dominado por polvo"
     if deltas.get('PM2.5', 0) > 0.25 and deltas.get('PM10', 0) > 0.15:
-        label = "high particulate load"
+        label = "carga alta de partículas"
     if all(abs(v) < 0.10 for v in deltas.values()):
-        label = "near-normal levels"
+        label = "niveles casi normales"
 
-    # 5) craft the narrative
-    def pct(x):  # pretty percent
+    # 5) construir la narrativa
+    def pct(x):  # porcentaje bonito
         return f"{x*100:.0f}%"
 
     why_bits = []
     for k, v in drivers:
-        direction = "higher" if v > 0 else "lower"
-        why_bits.append(f"{nice.get(k, k)} is {direction} than usual by ~{pct(abs(v))}")
+        direction = "más alto" if v > 0 else "más bajo"
+        why_bits.append(f"{nice.get(k, k)} está {direction} que lo usual por ~{pct(abs(v))}")
 
-    # 6) actions (short, actionable, window-aware)
+    # 6) acciones (cortas, accionables y conscientes de la ventana)
     actions = []
-    if label.startswith("traffic"):
+    if label.startswith("pico impulsado por tráfico"):
         if window == "morning_peak":
             actions += [
-                "Stagger school/work start times by 30–60 min.",
-                "Prioritize bus-only lanes and signal timing on main corridors.",
-                "Discourage short car trips in the 7–9 a.m. window."
+                "Escalonar horarios de entrada escolar/laboral 30–60 min.",
+                "Priorizar carriles exclusivos para autobús y semaforización en ejes principales.",
+                "Desincentivar viajes cortos en auto entre 7–9 a.m."
             ]
         else:
             actions += [
-                "Shift delivery windows away from 5–8 p.m.",
-                "Enforce low-emission zones on congested arterials."
+                "Mover ventanas de reparto fuera de 5–8 p.m.",
+                "Aplicar zonas de bajas emisiones en arterias congestionadas."
             ]
-    if "ozone" in label:
+    if "ozono" in label:
         actions += [
-            "Reduce solvent/paint use at midday; schedule for morning/evening.",
-            "Promote remote work or transit during 12–16 h sunny periods."
+            "Reducir uso de solventes/pinturas al mediodía; programar en mañana/tarde.",
+            "Promover trabajo remoto o transporte público en periodos soleados 12–16 h."
         ]
-    if "dust" in label or "particulate" in label:
+    if "polvo" in label or "partículas" in label:
         actions += [
-            "Increase street sweeping and construction-site dust control.",
-            "Advise masks for sensitive groups; limit outdoor sports."
+            "Aumentar barrido de calles y control de polvo en obras.",
+            "Aconsejar mascarillas a grupos sensibles; limitar deporte al aire libre."
         ]
     if not actions:
-        actions = ["Maintain current controls; levels track the usual pattern."]
+        actions = ["Mantener controles actuales; los niveles siguen el patrón habitual."]
 
     return (
-        f"Pattern: **{label}** during **{window.replace('_',' ')}**.\n\n"
-        f"Why we think this: " + "; ".join(why_bits) + ".\n\n"
-        "What to do now:\n- " + "\n- ".join(actions)
+        f"Patrón: **{label}** durante **{window.replace('_',' ')}**.\n\n"
+        f"Por qué lo creemos: " + "; ".join(why_bits) + ".\n\n"
+        "Qué hacer ahora:\n- " + "\n- ".join(actions)
     )
 
-
-
 # ============================================================================
-# LIVE DATA MODULE
+# MÓDULO DE DATOS EN VIVO
 # ============================================================================
 
 def fetch_live_data(lat: float = 25.6866, lon: float = -100.3161, timeout: int = 10) -> Optional[Dict[str, float]]:
     """
-    Fetch live air quality data from API with fallback.
+    Obtener datos en vivo de calidad del aire desde un API con respaldo.
     
     Args:
-        lat: Latitude
-        lon: Longitude
-        timeout: Request timeout in seconds
+        lat: Latitud
+        lon: Longitud
+        timeout: Tiempo de espera de la solicitud en segundos
         
     Returns:
-        Dictionary with pollutant values or None on error
+        Diccionario con valores de contaminantes o None en error
     """
     try:
-        # Example using OpenWeather Air Pollution API (requires API key)
-        # For demo, returning mock data
-        logger.info(f"Fetching live data for ({lat}, {lon})")
+        # Ejemplo usando OpenWeather Air Pollution API (requiere API key)
+        # Para demo, regresamos datos simulados
+        logger.info(f"Obteniendo datos en vivo para ({lat}, {lon})")
         
-        # Mock implementation - replace with actual API call
+        # Implementación de ejemplo - reemplaza con llamada real
         # url = f"http://api.openweathermap.org/data/2.5/air_pollution?lat={lat}&lon={lon}&appid=YOUR_API_KEY"
         # response = requests.get(url, timeout=timeout)
         # data = response.json()
         
-        # Mock data for demonstration
+        # Datos simulados para demostración
         mock_data = {
             'CO': np.random.uniform(0.3, 1.2),
             'NO': np.random.uniform(0.01, 0.05),
@@ -463,121 +459,118 @@ def fetch_live_data(lat: float = 25.6866, lon: float = -100.3161, timeout: int =
         return mock_data
         
     except Exception as e:
-        logger.error(f"API fetch failed: {e}")
+        logger.error(f"Fallo al consultar el API: {e}")
         return None
 
 # ============================================================================
-# STREAMLIT APP
+# APLICACIÓN STREAMLIT
 # ============================================================================
 
 def render_eda(df):
-    st.title("Exploratory Data Analysis (EDA): Digging into the Data")
+    st.title("Análisis Exploratorio de Datos (EDA): Profundizando en los datos")
     st.markdown("""
-    Let's explore the raw data! See distributions, trends, and connections between pollutants.
-    Use the interactive charts to zoom and hover for details.
+    ¡Vamos a explorar los datos crudos! Observa distribuciones, tendencias y conexiones entre contaminantes.
+    Usa los gráficos interactivos para hacer zoom y ver detalles al pasar el mouse.
     """)
     
-    # Extended: Pollutant distributions (histograms)
-    pollutant = st.selectbox("Select Pollutant to Explore:", df.columns[1:9])  # Assuming pollutants start after 'date'
+    # Distribuciones de contaminantes (histogramas)
+    pollutant = st.selectbox("Selecciona contaminante a explorar:", df.columns[1:9])  # Asumiendo que los contaminantes empiezan después de 'date'
     fig_dist = px.histogram(df, x=pollutant, color='time_window', marginal="box", 
-                            title=f"Distribution of {pollutant} (Group by Time Window)",
-                            labels={pollutant: f"{pollutant} Level"})
+                            title=f"Distribución de {pollutant} (Agrupado por ventana horaria)",
+                            labels={pollutant: f"Nivel de {pollutant}"})
     st.plotly_chart(fig_dist, use_container_width=True)
-    st.markdown(f"**Insight:** {pollutant} is highest in evening peaks—could be from rush hour emissions.")
+    st.markdown(f"**Insight:** {pollutant} es más alto en los picos vespertinos—podría deberse a emisiones en hora pico.")
     
-    # Extended: Correlation heatmap
+    # Mapa de calor de correlaciones
     corr = df[['CO', 'NO', 'NO2', 'NOX', 'O3', 'PM10', 'PM2.5', 'SO2']].corr()
     fig_corr = go.Figure(data=go.Heatmap(z=corr.values, x=corr.columns, y=corr.columns, 
                                          colorscale='RdYlGn', zmin=-1, zmax=1))
-    fig_corr.update_layout(title="Pollutant Connections (Red = Strong Link, e.g., NOX and Traffic)")
+    fig_corr.update_layout(title="Conexiones entre contaminantes (Rojo = vínculo fuerte, p. ej., NOX y tráfico)")
     st.plotly_chart(fig_corr, use_container_width=True)
-    st.markdown("**Insight:** NOX and CO are strongly linked—both from car exhaust. Reducing traffic could lower both.")
+    st.markdown("**Insight:** NOX y CO están fuertemente ligados—ambos provienen del escape de autos. Reducir tráfico podría bajar ambos.")
     
-    # Extended: Time series with slider for date range
+    # Serie temporal con control deslizante de rango de fechas
     min_date = pd.to_datetime(df['date'].min()).to_pydatetime()
     max_date = pd.to_datetime(df['date'].max()).to_pydatetime()
 
-    date_range = st.slider("Select Date Range:", min_value=min_date, max_value=max_date, 
+    date_range = st.slider("Selecciona rango de fechas:", min_value=min_date, max_value=max_date, 
                            value=(min_date, max_date))
     filtered_df = df[(df['date'] >= pd.Timestamp(date_range[0])) & (df['date'] <= pd.Timestamp(date_range[1]))]
-    fig_ts = px.line(filtered_df, x='date', y=['PM10', 'PM2.5'], title="PM Trends Over Time (Slide to Filter)")
+    fig_ts = px.line(filtered_df, x='date', y=['PM10', 'PM2.5'], title="Tendencias de PM en el tiempo (desliza para filtrar)")
     st.plotly_chart(fig_ts, use_container_width=True)
     
-    # If stations exist, add comparison
+    # Si existen estaciones, agregar comparación
     if 'station' in df.columns:
         fig_station = px.box(df, x='station', y='PM2.5', color='time_window', 
-                             title="Air Quality by Station (Compare Locations)")
+                             title="Calidad del aire por estación (compara ubicaciones)")
         st.plotly_chart(fig_station, use_container_width=True)
-        st.markdown("**Insight:** Norte station has higher PM—possibly near industrial areas.")
-
+        st.markdown("**Insight:** La estación Norte muestra mayor PM—posiblemente cercana a zonas industriales.")
 
 def render_temporal_analysis(models, windows, features):
-    st.title("Temporal Analysis: Pollution Patterns by Time of Day")
+    st.title("Análisis temporal: Patrones por momento del día")
     st.markdown("""
-    Here, we break down air quality into time windows (like morning rush hour). 
-    We use simple grouping techniques to spot patterns—think of clusters as 'types' of air quality days.
-    Select a time window below to see visuals and easy-to-understand insights.
+    Aquí desglosamos la calidad del aire por ventanas horarias (como la hora pico matutina). 
+    Usamos técnicas de agrupación simples para detectar patrones—piensa en clústeres como “tipos” de días.
+    Selecciona una ventana horaria abajo para ver visualizaciones e insights fáciles de entender.
     """)
     
-    selected_window = st.selectbox("Select time window:", windows, index=windows.index('morning_peak'))
+    selected_window = st.selectbox("Selecciona ventana horaria:", windows, index=windows.index('morning_peak'))
     
     if selected_window in models:
         model = models[selected_window]
         pca = model['pca']
         kmeans = model['kmeans']
-        centers = model['centers']  # Assuming this is a DataFrame or array of cluster centers
+        centers = model['centers']  # Suponiendo array de centros de clúster
         explained_variance = model['explained_variance']
         
         col1, col2 = st.columns(2)
         
         with col1:
-            st.subheader("Main Patterns (Explained Variance)")
+            st.subheader("Patrones principales (varianza explicada)")
             st.markdown("""
-            This shows how much of the pollution variation is captured by the top patterns. 
-            Higher bars mean more important patterns—like traffic dominating mornings.
+            Esto muestra cuánta variación de la contaminación capturan los patrones principales. 
+            Barras más altas significan patrones más importantes—como tráfico dominando por la mañana.
             """)
             fig_var = px.bar(x=['PC1', 'PC2'], y=explained_variance[:2], 
-                             title=f"Key Patterns in {selected_window.replace('_', ' ').title()}",
-                             labels={'x': 'Pattern', 'y': 'Importance (Variance)'})
+                             title=f"Patrones clave en {selected_window.replace('_', ' ').title()}",
+                             labels={'x': 'Patrón', 'y': 'Importancia (Varianza)'})
             fig_var.update_traces(marker_color='lightblue')
             st.plotly_chart(fig_var, use_container_width=True)
         
         with col2:
-            st.subheader("Cluster Types (Average Pollution Levels)")
+            st.subheader("Tipos de clúster (promedio de contaminantes)")
             st.markdown("""
-            Clusters group similar air quality moments. Green = low pollution (good), Red = high (be cautious).
-            Hover over the heatmap for exact values.
+            Los clústeres agrupan momentos de aire similar. Verde = baja contaminación (bien), Rojo = alta (precaución).
+            Pasa el mouse sobre el mapa de calor para ver valores exactos.
             """)
-            # Assuming centers is a 2D array (clusters x features); convert to DF if needed
             centers_df = pd.DataFrame(centers, columns=features)
             centers_df['Cluster'] = [f"Cluster {i}" for i in range(len(centers))]
             fig_heat = px.imshow(centers_df.set_index('Cluster').values, 
-                                 labels=dict(x="Pollutants", y="Clusters", color="Level (Standardized)"),
+                                 labels=dict(x="Contaminantes", y="Clústeres", color="Nivel (Estandarizado)"),
                                  x=features, y=centers_df['Cluster'],
-                                 color_continuous_scale='RdYlGn_r',  # Red bad, Green good
-                                 title=f"Pollution Types in {selected_window.replace('_', ' ').title()}")
+                                 color_continuous_scale='RdYlGn_r',
+                                 title=f"Tipos de contaminación en {selected_window.replace('_', ' ').title()}")
             st.plotly_chart(fig_heat, use_container_width=True)
         
-        # Friendly cluster interpretations (extend based on your generate_interpretation logic)
-        st.subheader("What Do These Clusters Mean?")
+        st.subheader("¿Qué significan estos clústeres?")
         for i, row in centers_df.iterrows():
-            row_dict = dict(row[features])  # Select only feature columns to avoid type errors
-            interp = generate_interpretation(selected_window, row_dict, row_dict)  # Reuse your function; adjust as needed
-            st.markdown(f"**Cluster {i}:** {interp} (e.g., if high PM, avoid outdoor exercise).")
+            row_dict = dict(row[features])
+            interp = generate_interpretation(selected_window, row_dict, row_dict)
+            st.markdown(f"**Cluster {i}:** {interp} (p. ej., si PM es alta, evita ejercicio al aire libre).")
         
-        with st.expander("Nerdy Details for Data Fans"):
-            st.markdown("We used PCA to reduce dimensions and KMeans to cluster. Variance: PC1 captures traffic-related pollutants.")
+        with st.expander("Detalles nerd para fans de los datos"):
+            st.markdown("Usamos PCA para reducir dimensiones y KMeans para agrupar. Varianza: PC1 captura contaminantes de tráfico.")
     else:
-        st.warning("No model for this window yet. Click 'Retrain Models' to update.")
+        st.warning("Aún no hay modelo para esta ventana. Haz clic en 'Retrain Models' para actualizar.")
 
 def render_simulator(models: Dict):
-    """Render What-If Simulator with random/reset that safely update sliders via pending state."""
-    st.header("🎮 What-If Simulator")
+    """Renderizar el simulador de escenarios con aleatorio/restablecer que actualiza sliders de forma segura vía estado pendiente."""
+    st.header("🎮 Simulador ¿Qué pasaría si?")
 
     windows = ['morning_peak', 'midday', 'evening_peak', 'night']
-    selected_window = st.selectbox("Select time window for simulation:", windows)
+    selected_window = st.selectbox("Selecciona ventana para la simulación:", windows)
 
-    # Features + ranges
+    # Features + rangos
     features = ['CO', 'NO', 'NO2', 'NOX', 'O3', 'PM10', 'PM2.5', 'SO2']
     ranges = {
         'CO':   (0.0, 2.0, 0.01),
@@ -590,7 +583,7 @@ def render_simulator(models: Dict):
         'SO2':  (0.0, 0.02, 0.0001),
     }
 
-    # --- Init defaults for the current window (once) ---
+    # --- Inicializar valores por ventana (una sola vez) ---
     if 'sim_window' not in st.session_state:
         st.session_state.sim_window = selected_window
 
@@ -601,27 +594,27 @@ def render_simulator(models: Dict):
             'CO': 0.6, 'NO': 0.03, 'NO2': 0.04, 'NOX': 0.07,
             'O3': 0.05, 'PM10': 45.0, 'PM2.5': 20.0, 'SO2': 0.005
         }
-        # Pre-seed slider values (only if not yet set)
+        # Pre-cargar sliders (solo si aún no existen)
         for f in features:
             key = f"slider_{f}"
             if key not in st.session_state:
                 st.session_state[key] = float(st.session_state.sim_defaults[f])
 
-    # --- Apply any pending slider values BEFORE creating widgets ---
+    # --- Aplicar valores pendientes ANTES de crear widgets ---
     pending = st.session_state.pop("pending_slider_values", None)
     pending_window = st.session_state.pop("pending_for_window", None)
     if pending and (pending_window == selected_window):
         for f, val in pending.items():
             st.session_state[f"slider_{f}"] = float(val)
 
-    # Helper to generate snapped random values on the step grid
+    # Ayudante para aleatorios alineados al step
     def _rand_on_step(mn, mx, step):
         if step >= 1:
             return float(np.random.randint(int(mn), int(mx) + 1))
         n_steps = int(round((mx - mn) / step))
         return float(mn + np.random.randint(0, n_steps + 1) * step)
 
-    st.subheader("Adjust Pollutant Levels")
+    st.subheader("Ajusta niveles de contaminantes")
     with st.form(key="simulator_form"):
         col1, col2 = st.columns(2)
         for i, feature in enumerate(features):
@@ -632,18 +625,18 @@ def render_simulator(models: Dict):
                     min_value=mn,
                     max_value=mx,
                     step=step,
-                    key=f"slider_{feature}",  # value is taken from session_state
+                    key=f"slider_{feature}",  # toma el valor desde session_state
                 )
 
         b1, b2, b3 = st.columns([1, 1, 1])
         with b1:
-            submitted = st.form_submit_button("🚀 Simulate", type="primary")
+            submitted = st.form_submit_button("🚀 Simular", type="primary")
         with b2:
-            randomize = st.form_submit_button("🎲 Random scenario")
+            randomize = st.form_submit_button("🎲 Escenario aleatorio")
         with b3:
-            reset = st.form_submit_button("↩ Reset defaults")
+            reset = st.form_submit_button("↩ Restablecer valores")
 
-    # Handle randomize/reset by queueing new values and rerunning
+    # Aleatorio/restablecer: encolar nuevos valores y re-ejecutar
     if randomize:
         new_vals = {}
         for f in features:
@@ -659,25 +652,25 @@ def render_simulator(models: Dict):
         st.session_state["pending_for_window"] = selected_window
         st.rerun()
 
-    # On submit, read EXACT slider values
+    # Al enviar, leer EXACTAMENTE lo que está en los sliders
     if submitted:
         if selected_window not in models:
-            st.warning("No model available for this window. Retrain models first.")
+            st.warning("No hay modelo disponible para esta ventana. Reentrena los modelos primero.")
             return
 
         input_values = [float(st.session_state[f"slider_{f}"]) for f in features]
         result = simulate_scenario(selected_window, input_values, features)
 
-        st.success("Simulation Complete!")
+        st.success("¡Simulación completada!")
         c1, c2, c3 = st.columns(3)
         with c1:
-            st.metric("Predicted Cluster", result['cluster'])
+            st.metric("Clúster predicho", result['cluster'])
         with c2:
-            st.metric("Distance to Centroid", f"{result['dist_to_centroid']:.3f}")
+            st.metric("Distancia al centroide", f"{result['dist_to_centroid']:.3f}")
         with c3:
-            st.metric("Time Window", result['window'])
+            st.metric("Ventana horaria", result['window'])
 
-        st.info(f"💡 **Recommendation:** {result['interpretation']}")
+        st.info(f"💡 **Recomendación:** {result['interpretation']}")
 
         if result['nearest_centroid']:
             comparison_df = pd.DataFrame({
@@ -686,43 +679,42 @@ def render_simulator(models: Dict):
                 'Cluster Center': [result['nearest_centroid'].get(f, 0) for f in features]
             })
             fig = go.Figure()
-            fig.add_trace(go.Bar(name='Your Input', x=comparison_df['Feature'], y=comparison_df['Your Input']))
-            fig.add_trace(go.Bar(name='Cluster Center', x=comparison_df['Feature'], y=comparison_df['Cluster Center']))
-            fig.update_layout(title="Input vs. Cluster Center Comparison", barmode='group', hovermode='x unified')
+            fig.add_trace(go.Bar(name='Tu entrada', x=comparison_df['Feature'], y=comparison_df['Your Input']))
+            fig.add_trace(go.Bar(name='Centroide del clúster', x=comparison_df['Feature'], y=comparison_df['Cluster Center']))
+            fig.update_layout(title="Comparación: tu entrada vs. centroide", barmode='group', hovermode='x unified')
             st.plotly_chart(fig, use_container_width=True)
 
 def render_insights(df, models):
-    st.title("Insights & Recommendations: What to Do")
-    st.markdown("Based on patterns, here are actionable tips. Select options to customize.")
+    st.title("Insights y recomendaciones: Qué hacer")
+    st.markdown("Con base en los patrones, estas son acciones aplicables. Ajusta opciones para personalizar.")
     
-    selected_window = st.selectbox("Focus on Time Window:", list(models.keys()))
-    selected_pollutant = st.selectbox("Focus on Pollutant:", ['All'] + ['CO', 'NO', 'NO2', 'NOX', 'O3', 'PM10', 'PM2.5', 'SO2'])
+    selected_window = st.selectbox("Enfocar en ventana horaria:", list(models.keys()))
+    selected_pollutant = st.selectbox("Enfocar en contaminante:", ['All'] + ['CO', 'NO', 'NO2', 'NOX', 'O3', 'PM10', 'PM2.5', 'SO2'])
     
-    # Specific insights from data/models
+    # Insights específicos desde datos/modelos
     window_df = df[df['time_window'] == selected_window]
     if selected_pollutant != 'All':
         avg = window_df[selected_pollutant].mean()
-        insight = f"In {selected_window}, {selected_pollutant} averages {avg:.2f}. "
+        insight = f"En {selected_window}, {selected_pollutant} promedia {avg:.2f}. "
         if 'PM' in selected_pollutant and avg > 25:
-            insight += "That's above safe levels—wear masks outdoors."
+            insight += "Está por encima de niveles seguros—usa cubrebocas en exteriores."
         elif selected_pollutant == 'O3' and avg > 0.05:
-            insight += "High ozone: Avoid strenuous activity in sun."
-        st.markdown(f"**Specific Tip:** {insight}")
+            insight += "Ozono alto: evita actividad extenuante bajo el sol."
+        st.markdown(f"**Consejo específico:** {insight}")
     else:
-        # Cluster-based insight
+        # Insight basado en clúster
         model = models[selected_window]
-        st.markdown(f"**Pattern in {selected_window}:** Most data falls into Cluster {np.argmax(model['centers'].mean(axis=1))}—low pollution overall, but watch for traffic spikes.")
+        st.markdown(f"**Patrón en {selected_window}:** La mayoría cae en el clúster {np.argmax(model['centers'].mean(axis=1))}—baja contaminación en general, pero cuida picos por tráfico.")
     
-    # Interactive: Simulate quick scenario
-        # Interactive: Simulate quick scenario (NOx-focused, base on window medians)
-    st.subheader("Quick Tip Simulator")
-    nox_slider = st.slider("Hypothetical NOx Level:", 0.0, 0.2, 0.07, 0.001, key="quicktip_nox")
+    # Interactivo: Simulador rápido (enfocado en NOx, base en medianas por ventana)
+    st.subheader("Simulador de tip rápido")
+    nox_slider = st.slider("Nivel hipotético de NOx:", 0.0, 0.2, 0.07, 0.001, key="quicktip_nox")
     features_list = ['CO', 'NO', 'NO2', 'NOX', 'O3', 'PM10', 'PM2.5', 'SO2']
     nox_idx = features_list.index('NOX')
 
-    # Base vector from medians of this window to avoid fake -100% deltas
+    # Vector base a partir de medianas de esta ventana para evitar deltas de -100% falsos
     base = window_df[features_list].median(numeric_only=True).to_dict()
-    # Fallback in case of NaNs (very edge)
+    # Respaldo por si hay NaNs (caso extremo)
     for k, v in base.items():
         if pd.isna(v):
             base[k] = 0.0
@@ -731,93 +723,92 @@ def render_insights(df, models):
     vector[nox_idx] = float(nox_slider)
 
     result = simulate_scenario(selected_window, vector, features=features_list, model_dir='models')
-    st.markdown(f"If NOx is {nox_slider:.3f}, you'd be in {result['interpretation']}")
-
+    st.markdown(f"Si NOx es {nox_slider:.3f}, estarías en {result['interpretation']}")
 
 # ============================================================================
-# MAIN APP ENTRY
+# ENTRADA PRINCIPAL DE LA APP
 # ============================================================================
 
 def main():
-    """Main Streamlit application."""
+    """Aplicación principal de Streamlit."""
     st.set_page_config(
-        page_title="Monterrey Air Quality Dashboard",
+        page_title="Tablero de Calidad del Aire de Monterrey",
         page_icon="🌬️",
         layout="wide"
     )
     
-    st.title("🌬️ Monterrey Air Quality Analysis System")
-    st.markdown("**Real-time monitoring, analysis, and recommendations for air quality management**")
+    st.title("🌬️ Sistema de Análisis de la Calidad del Aire de Monterrey")
+    st.markdown("**Monitoreo en tiempo real, análisis y recomendaciones para la gestión de la calidad del aire**")
     
-    # Sidebar navigation
-    st.sidebar.title("Navigation")
+    # Navegación lateral
+    st.sidebar.title("Navegación")
     section = st.sidebar.radio(
-        "Select Section:",
+        "Selecciona sección:",
         ["📝 Executive Summary", "📊 EDA", "⏰ Temporal Analysis", "🎮 What-If Simulator", "💡 Insights"]
     )
     
-    # Global filters
+    # Filtros globales
     st.sidebar.markdown("---")
-    st.sidebar.subheader("Global Filters")
+    st.sidebar.subheader("Filtros globales")
     
-    # Load data
+    # Cargar datos
     @st.cache_data(show_spinner=False)
     def load_data():
         return load_excel_frames()
     
-    with st.spinner("Loading data..."):
+    with st.spinner("Cargando datos..."):
         df = load_data()
     
     if df.empty:
-        st.error("❌ No data loaded. Please check data files.")
+        st.error("❌ No se cargaron datos. Revisa los archivos de datos.")
         return
     
-    # Add time windows
+    # Agregar ventanas horarias
     df = make_temporal_windows(df)
     
-    # Station filter
+    # Filtro por estación
     stations = st.sidebar.multiselect(
-        "Select stations:",
+        "Selecciona estaciones:",
         df['station'].unique(),
         default=df['station'].unique()[:3]
     )
     
-    # Date range filter
+    # Filtro por rango de fechas
     date_range = st.sidebar.date_input(
-        "Date range:",
+        "Rango de fechas:",
         value=(df['date'].min(), df['date'].max()),
         min_value=df['date'].min(),
         max_value=df['date'].max()
     )
     
-    # Apply filters
+    # Aplicar filtros
     filtered_df = df[
         (df['station'].isin(stations)) &
         (df['date'] >= pd.Timestamp(date_range[0])) &
         (df['date'] <= pd.Timestamp(date_range[1]))
     ]
     
-    # Load or train models
+    # Cargar o entrenar modelos
     @st.cache_resource(show_spinner=False)
     def load_or_train_models():
         windows = ['morning_peak', 'midday', 'evening_peak', 'night']
         features = ['CO', 'NO', 'NO2', 'NOX', 'O3', 'PM10', 'PM2.5', 'SO2']
         
-        # Check if models exist
+        # Revisar si existen modelos
         model_dir = "models"
         if os.path.exists(model_dir) and len(os.listdir(model_dir)) > 0:
             return load_models(windows, model_dir)
         else:
             return train_and_save_models(filtered_df, windows, features)
     
-    with st.spinner("Loading models..."):
+    with st.spinner("Cargando modelos..."):
         models = load_or_train_models()
     
-    # Session state for last simulation
+    # Estado de sesión para última simulación
     if 'last_simulation' not in st.session_state:
         st.session_state.last_simulation = None
     
-    # Render selected section
+    # Renderizar sección seleccionada
     windows = ['morning_peak', 'midday', 'evening_peak', 'night']
     features = ['CO', 'NO', 'NO2', 'NOX', 'O3', 'PM10', 'PM2.5', 'SO2']
     if section == "📝 Executive Summary":
@@ -831,58 +822,58 @@ def main():
     elif section == "💡 Insights":
         render_insights(filtered_df, models)
     
-    # Footer
+    # Pie de página
     st.sidebar.markdown("---")
-    st.sidebar.caption("Built with Streamlit • v1.0.0")
-    st.sidebar.caption("© 2025 Monterrey Air Quality Team")
+    st.sidebar.caption("Construido con Streamlit • v1.0.0")
+    st.sidebar.caption("© 2025 Equipo de Calidad del Aire de Monterrey")
 
 # ============================================================================
-# CLI INTERFACE
+# INTERFAZ CLI
 # ============================================================================
 
 if __name__ == "__main__":
     import sys
     
     if len(sys.argv) > 1:
-        # CLI mode
+        # Modo CLI
         import argparse
         
-        parser = argparse.ArgumentParser(description="Monterrey Air Quality Analysis")
-        parser.add_argument("--retrain", action="store_true", help="Retrain all models")
-        parser.add_argument("--window", type=str, help="Time window for simulation")
-        parser.add_argument("--simulate", type=str, help="Simulate with values (comma-separated)")
+        parser = argparse.ArgumentParser(description="Análisis de Calidad del Aire de Monterrey")
+        parser.add_argument("--retrain", action="store_true", help="Reentrenar todos los modelos")
+        parser.add_argument("--window", type=str, help="Ventana horaria para simulación")
+        parser.add_argument("--simulate", type=str, help="Simular con valores (separados por coma)")
         
         args = parser.parse_args()
         
         if args.retrain:
-            # Retraining models...
+            # Reentrenando modelos...
             df = load_excel_frames()
             df = make_temporal_windows(df)
             windows = ['morning_peak', 'midday', 'evening_peak', 'night']
             features = ['CO', 'NO', 'NO2', 'NOX', 'O3', 'PM10', 'PM2.5', 'SO2']
             models = train_and_save_models(df, windows, features, force_retrain=True)
-            print(f"✅ Retrained {len(models)} models")
+            print(f"✅ Se reentrenaron {len(models)} modelos")
         
         elif args.window and args.simulate:
-            # Simulating for {args.window}...
+            # Simulando para {args.window}...
             features = ['CO', 'NO', 'NO2', 'NOX', 'O3', 'PM10', 'PM2.5', 'SO2']
             
-            # Parse values
+            # Parsear valores
             try:
                 values = [float(v.strip()) for v in args.simulate.split(',')]
                 if len(values) != len(features):
                     raise ValueError
             except ValueError:
-                print(f"Error: Expected {len(features)} comma-separated float values, e.g., 0.5,0.03,0.04,0.07,0.05,50,25,0.005")
+                print(f"Error: Se esperaban {len(features)} valores float separados por comas, p. ej.: 0.5,0.03,0.04,0.07,0.05,50,25,0.005")
                 sys.exit(1)
             
             result = simulate_scenario(args.window, values, features)
-            print(f"Cluster: {result['cluster']}")
-            print(f"Distance: {result['dist_to_centroid']:.3f}")
-            print(f"Interpretation: {result['interpretation']}")
+            print(f"Clúster: {result['cluster']}")
+            print(f"Distancia: {result['dist_to_centroid']:.3f}")
+            print(f"Interpretación: {result['interpretation']}")
         else:
-            print("Starting Streamlit app...")
+            print("Iniciando aplicación de Streamlit...")
             os.system("streamlit run " + __file__)
     else:
-        # Streamlit mode
+        # Modo Streamlit
         main()
