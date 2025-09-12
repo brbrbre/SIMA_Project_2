@@ -52,11 +52,11 @@ def render_executive_summary(df):
     max_o3 = df['O3'].max()
     col1, col2, col3 = st.columns(3)
     col1.metric("PM2.5 promedio (Partículas finas)", f"{avg_pm25:.1f} µg/m³", "Moderado" if avg_pm25 < 25 else "No saludable")
-    col2.metric("Pico de Ozono (O3)", f"{max_o3:.3f} ppm", "Alto al mediodía")
+    col2.metric("Pico de Ozono (O3)", f"{max_o3:.3f} ppb", "Alto al mediodía")
     col3.metric("Peor ventana horaria", "Pico vespertino", "Basado en NOX/CO por tráfico")
     
     # Serie temporal interactiva (todos los contaminantes en el tiempo)
-    fig_ts = px.line(df, x='date', y=['PM2.5', 'O3', 'NOX', 'CO'], 
+    fig_ts = px.line(df, x='date', y=['O3', 'NOX', 'CO'], 
                      title="Tendencias de contaminantes en el tiempo (Pasa el mouse para detalles, haz zoom para explorar)")
     fig_ts.update_layout(hovermode="x unified")
     st.plotly_chart(fig_ts, use_container_width=True)
@@ -311,6 +311,10 @@ def simulate_scenario(window: str,
         "interpretation": interpretation
     }
 
+# ============================================================================
+# MODELS MODULE
+# ============================================================================
+
 def generate_interpretation(window: str,
                             sample: dict,
                             centroid: dict) -> str:
@@ -336,16 +340,16 @@ def generate_interpretation(window: str,
     str
         Narrativa para personas no técnicas.
     """
-    # 1) términos comprensibles para contaminantes
+    # 1) términos comprensibles para contaminantes con citas APA
     nice = {
-        'CO': 'monóxido de carbono (indicador de escape vehicular)',
-        'NO': 'óxido nítrico (emisión fresca de tráfico)',
-        'NO2': 'dióxido de nitrógeno (tráfico/combustión)',
-        'NOX': 'NOx (mezcla global de tráfico/combustión)',
-        'O3': 'ozono (reacción de luz solar + emisiones)',
-        'PM10': 'polvo grueso (PM10)',
-        'PM2.5': 'partículas finas (PM2.5, relevantes para salud)',
-        'SO2': 'dióxido de azufre (industrial/calidad de combustible)'
+        'CO': 'monóxido de carbono (indicador de escape vehicular) (U.S. Environmental Protection Agency [EPA], 2023)',
+        'NO': 'óxido nítrico (emisión fresca de tráfico) (EPA, 2023)',
+        'NO2': 'dióxido de nitrógeno (tráfico/combustión) (EPA, 2023)',
+        'NOX': 'NOx (mezcla global de tráfico/combustión) (EPA, 2023)',
+        'O3': 'ozono (reacción de luz solar + emisiones) (World Health Organization [WHO], 2021)',
+        'PM10': 'polvo grueso (PM10) (WHO, 2021)',
+        'PM2.5': 'partículas finas (PM2.5, relevantes para salud) (WHO, 2021)',
+        'SO2': 'dióxido de azufre (industrial/calidad de combustible) (EPA, 2023)'
     }
 
     # 2) desviaciones relativas (porcentaje) vs. el día típico para este clúster
@@ -361,20 +365,20 @@ def generate_interpretation(window: str,
     # 3) elegir los 2–3 “drivers” principales por desviación absoluta
     drivers = sorted(deltas.items(), key=lambda kv: abs(kv[1]), reverse=True)[:3]
 
-    # 4) etiqueta simple por ventana + señal
+    # 4) etiqueta simple por ventana + señal (corregidas para mayor precisión basada en fuentes)
     label = "condiciones típicas"
     if window in ("morning_peak", "evening_peak"):
         if deltas.get('NOX', 0) > 0.20 or deltas.get('CO', 0) > 0.20:
-            label = "pico impulsado por tráfico"
+            label = "pico impulsado por emisiones vehiculares"
     if window == "midday":
         if deltas.get('O3', 0) > 0.20:
-            label = "acumulación fotoquímica (ozono)"
+            label = "acumulación fotoquímica de ozono"
         if deltas.get('PM10', 0) > 0.25 and deltas.get('O3', 0) <= 0.20:
-            label = "día dominado por polvo"
+            label = "día dominado por partículas suspendidas"
     if deltas.get('PM2.5', 0) > 0.25 and deltas.get('PM10', 0) > 0.15:
-        label = "carga alta de partículas"
+        label = "carga elevada de material particulado"
     if all(abs(v) < 0.10 for v in deltas.values()):
-        label = "niveles casi normales"
+        label = "niveles cercanos a lo normal"
 
     # 5) construir la narrativa
     def pct(x):  # porcentaje bonito
@@ -385,38 +389,47 @@ def generate_interpretation(window: str,
         direction = "más alto" if v > 0 else "más bajo"
         why_bits.append(f"{nice.get(k, k)} está {direction} que lo usual por ~{pct(abs(v))}")
 
-    # 6) acciones (cortas, accionables y conscientes de la ventana)
+    # 6) acciones (cortas, accionables y conscientes de la ventana, con citas APA)
     actions = []
-    if label.startswith("pico impulsado por tráfico"):
+    if "emisiones vehiculares" in label:
         if window == "morning_peak":
             actions += [
-                "Escalonar horarios de entrada escolar/laboral 30–60 min.",
-                "Priorizar carriles exclusivos para autobús y semaforización en ejes principales.",
-                "Desincentivar viajes cortos en auto entre 7–9 a.m."
+                "Escalonar horarios de entrada escolar/laboral 30–60 min. (Molina et al., 2007)",
+                "Priorizar carriles exclusivos para autobús y semaforización en ejes principales. (International Transport Forum [ITF], 2017)",
+                "Desincentivar viajes cortos en auto entre 7–9 a.m. (Molina et al., 2007)"
             ]
         else:
             actions += [
-                "Mover ventanas de reparto fuera de 5–8 p.m.",
-                "Aplicar zonas de bajas emisiones en arterias congestionadas."
+                "Mover ventanas de reparto fuera de 5–8 p.m. (ITF, 2017)",
+                "Aplicar zonas de bajas emisiones en arterias congestionadas. (Molina et al., 2007)"
             ]
     if "ozono" in label:
         actions += [
-            "Reducir uso de solventes/pinturas al mediodía; programar en mañana/tarde.",
-            "Promover trabajo remoto o transporte público en periodos soleados 12–16 h."
+            "Reducir uso de solventes/pinturas al mediodía; programar en mañana/tarde. (WHO, 2021)",
+            "Promover trabajo remoto o transporte público en periodos soleados 12–16 h. (WHO, 2021)"
         ]
-    if "polvo" in label or "partículas" in label:
+    if "partículas" in label or "material particulado" in label:
         actions += [
-            "Aumentar barrido de calles y control de polvo en obras.",
-            "Aconsejar mascarillas a grupos sensibles; limitar deporte al aire libre."
+            "Aumentar barrido de calles y control de polvo en obras. (EPA, 2023)",
+            "Aconsejar mascarillas a grupos sensibles; limitar deporte al aire libre. (WHO, 2021)"
         ]
     if not actions:
-        actions = ["Mantener controles actuales; los niveles siguen el patrón habitual."]
+        actions = ["Mantener controles actuales; los niveles siguen el patrón habitual. (EPA, 2023)"]
 
-    return (
+    narrative = (
         f"Patrón: **{label}** durante **{window.replace('_',' ')}**.\n\n"
         f"Por qué lo creemos: " + "; ".join(why_bits) + ".\n\n"
         "Qué hacer ahora:\n- " + "\n- ".join(actions)
     )
+
+    # Agregar sección de referencias APA al final
+    references = "\n\n**Referencias:**\n"
+    references += "- U.S. Environmental Protection Agency. (2023). *Criteria air pollutants*. https://www.epa.gov/criteria-air-pollutants\n"
+    references += "- World Health Organization. (2021). *WHO global air quality guidelines*. https://iris.who.int/bitstream/handle/10665/345329/9789240034228-eng.pdf\n"
+    references += "- Molina, L. T., Velasco, E., Retama, A., & Zavala, M. (2007). Air quality management in Mexico. *Journal of the Air & Waste Management Association*, 57(12), 1465-1475. https://doi.org/10.3155/1047-3289.57.12.1465\n"
+    references += "- International Transport Forum. (2017). *Air pollution mitigation strategy for Mexico City*. https://www.itf-oecd.org/sites/default/files/docs/air-pollution-mitigation-strategy-mexico-city.pdf"
+
+    return narrative + references
 
 # ============================================================================
 # MÓDULO DE DATOS EN VIVO
@@ -475,12 +488,57 @@ def render_eda(df):
     
     # Distribuciones de contaminantes (histogramas)
     pollutant = st.selectbox("Selecciona contaminante a explorar:", df.columns[1:9])  # Asumiendo que los contaminantes empiezan después de 'date'
-    fig_dist = px.histogram(df, x=pollutant, color='time_window', marginal="box", 
-                            title=f"Distribución de {pollutant} (Agrupado por ventana horaria)",
-                            labels={pollutant: f"Nivel de {pollutant}"})
-    st.plotly_chart(fig_dist, use_container_width=True)
-    st.markdown(f"**Insight:** {pollutant} es más alto en los picos vespertinos—podría deberse a emisiones en hora pico.")
     
+    # --- después del selectbox `pollutant` en render_eda ---
+
+    # Asegura columna de hora
+    if 'hour' not in df.columns:
+        df['hour'] = pd.to_datetime(df['date']).dt.hour
+
+    hour_order = list(range(24))
+
+    # 1) Barras por HORA: promedio del contaminante por hora y ventana
+    fig_hour_hist = px.histogram(
+        df,
+        x='hour',
+        y=pollutant,
+        color='time_window',
+        histfunc='avg',              # << clave: promedio por hora
+        barmode='group',
+        category_orders={'hour': hour_order},
+        title=f"{pollutant} por hora del día (promedio por ventana horaria)",
+        labels={
+            'hour': 'Hora del día (0–23)',
+            pollutant: f"Nivel medio de {pollutant}",
+            'time_window': 'Ventana horaria'
+        }
+    )
+    fig_hour_hist.update_traces(
+        hovertemplate="Hora: %{x}:00<br>Nivel medio de "+pollutant+": %{y:.3f}"
+    )
+    st.plotly_chart(fig_hour_hist, use_container_width=True)
+
+    # 2) (Opcional) Caja por HORA para ver dispersión real por hora
+    fig_hour_box = px.box(
+        df,
+        x='hour',
+        y=pollutant,
+        color='time_window',
+        category_orders={'hour': hour_order},
+        points='outliers',
+        title=f"Distribución de {pollutant} por hora (todas las observaciones)",
+        labels={'hour': 'Hora del día (0–23)', pollutant: f"Nivel de {pollutant}"}
+    )
+    st.plotly_chart(fig_hour_box, use_container_width=True)
+
+
+    # Insight adaptado
+    st.markdown(
+        f"**Insight:** En horas **vespertinas (17–19 h)** suele haber niveles más altos de **{pollutant}**; probable efecto del tráfico en hora pico."
+    )
+
+        
+
     # Mapa de calor de correlaciones
     corr = df[['CO', 'NO', 'NO2', 'NOX', 'O3', 'PM10', 'PM2.5', 'SO2']].corr()
     fig_corr = go.Figure(data=go.Heatmap(z=corr.values, x=corr.columns, y=corr.columns, 
@@ -501,10 +559,10 @@ def render_eda(df):
     
     # Si existen estaciones, agregar comparación
     if 'station' in df.columns:
-        fig_station = px.box(df, x='station', y='PM2.5', color='time_window', 
+        fig_station = px.box(df, x='station', y='NOX', color='time_window', 
                              title="Calidad del aire por estación (compara ubicaciones)")
         st.plotly_chart(fig_station, use_container_width=True)
-        st.markdown("**Insight:** La estación Norte muestra mayor PM—posiblemente cercana a zonas industriales.")
+        st.markdown("**Insight:** La estación SUROESTE 2 (San Pedro Garza García) muestra mayor NOX, posiblemente por el alto tráfico vehicular.")
 
 def render_temporal_analysis(models, windows, features):
     st.title("Análisis temporal: Patrones por momento del día")
@@ -565,7 +623,7 @@ def render_temporal_analysis(models, windows, features):
 
 def render_simulator(models: Dict):
     """Renderizar el simulador de escenarios con aleatorio/restablecer que actualiza sliders de forma segura vía estado pendiente."""
-    st.header("🎮 Simulador ¿Qué pasaría si?")
+    st.header("")
 
     windows = ['morning_peak', 'midday', 'evening_peak', 'night']
     selected_window = st.selectbox("Selecciona ventana para la simulación:", windows)
@@ -737,14 +795,14 @@ def main():
         layout="wide"
     )
     
-    st.title("🌬️ Sistema de Análisis de la Calidad del Aire de Monterrey")
+    st.title("Sistema de Análisis de la Calidad del Aire de Monterrey")
     st.markdown("**Monitoreo en tiempo real, análisis y recomendaciones para la gestión de la calidad del aire**")
     
     # Navegación lateral
     st.sidebar.title("Navegación")
     section = st.sidebar.radio(
         "Selecciona sección:",
-        ["📝 Executive Summary", "📊 EDA", "⏰ Temporal Analysis", "🎮 What-If Simulator", "💡 Insights"]
+        ["Resumen Ejecutivo", "Análisis Exploratorio de los Datos", "Análisis Temporal", "Simulador", "Insights"]
     )
     
     # Filtros globales
@@ -811,15 +869,15 @@ def main():
     # Renderizar sección seleccionada
     windows = ['morning_peak', 'midday', 'evening_peak', 'night']
     features = ['CO', 'NO', 'NO2', 'NOX', 'O3', 'PM10', 'PM2.5', 'SO2']
-    if section == "📝 Executive Summary":
+    if section == "Resumen Ejecutivo":
         render_executive_summary(filtered_df)
-    elif section == "📊 EDA":
+    elif section == "Análisis Exploratorio de los Datos":
         render_eda(filtered_df)
-    elif section == "⏰ Temporal Analysis":
+    elif section == "Análisis Temporal":
         render_temporal_analysis(models, windows, features)
-    elif section == "🎮 What-If Simulator":
+    elif section == "Simulador":
         render_simulator(models)
-    elif section == "💡 Insights":
+    elif section == "Insights":
         render_insights(filtered_df, models)
     
     # Pie de página
