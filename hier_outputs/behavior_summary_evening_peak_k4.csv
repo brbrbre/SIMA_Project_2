@@ -1,0 +1,5 @@
+window,k,cluster,n,semantic_label,description,NOX_median,NOX_pct,CO_median,CO_pct,PM10_median,PM10_pct,PM2.5_median,PM2.5_pct,O3_median,O3_pct,NO_median,NO_pct,NO2_median,NO2_pct,SO2_median,SO2_pct
+evening_peak,4,0,5835,Mixto,"NOX: bajo, CO: medio, PM10: medio, PM2.5: medio, O3: medio, NO: medio, NO2: bajo, SO2: medio",10.6,23,1.45,56,58.0,50,16.69,49,45.0,68,3.2,28,7.3,24,4.0,57
+evening_peak,4,1,5327,Mixto,"NOX: medio, CO: medio, PM10: medio, PM2.5: medio, O3: medio, NO: medio, NO2: medio, SO2: medio",24.8,72,1.38,53,71.0,67,22.0,67,37.0,51,5.0,69,19.2,72,4.6,68
+evening_peak,4,2,3326,Mixto,"NOX: medio, CO: bajo, PM10: bajo, PM2.5: bajo, O3: medio, NO: medio, NO2: medio, SO2: bajo",14.14995102215023,41,0.72,18,41.0,23,10.0,24,31.0,37,3.8,47,9.9,40,2.6,18
+evening_peak,4,3,1658,Tráfico alto,"NOX: alto, CO: medio, PM10: medio, PM2.5: medio, O3: bajo, NO: alto, NO2: alto, SO2: medio",47.05,92,1.61,65,61.0,55,18.119999999999997,55,13.0,7,13.649999999999999,92,29.3,89,3.4,42

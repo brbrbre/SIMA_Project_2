@@ -1,0 +1,18 @@
+Comportamiento por clúster — midday (k=5)
+============================================================
+
+- Cluster 0 (n=8064): Mixto
+  NOX: medio, CO: medio, PM10: medio, PM2.5: medio, O3: alto, NO: medio, NO2: medio, SO2: medio
+
+- Cluster 1 (n=5555): Tráfico alto
+  NOX: alto, CO: medio, PM10: alto, PM2.5: medio, O3: bajo, NO: alto, NO2: alto, SO2: medio
+
+- Cluster 2 (n=3302): Mixto
+  NOX: bajo, CO: medio, PM10: medio, PM2.5: bajo, O3: medio, NO: bajo, NO2: bajo, SO2: medio
+
+- Cluster 3 (n=4143): Mixto
+  NOX: medio, CO: medio, PM10: medio, PM2.5: medio, O3: medio, NO: medio, NO2: medio, SO2: medio
+
+- Cluster 4 (n=3164): Mixto
+  NOX: bajo, CO: bajo, PM10: bajo, PM2.5: bajo, O3: medio, NO: medio, NO2: bajo, SO2: bajo
+

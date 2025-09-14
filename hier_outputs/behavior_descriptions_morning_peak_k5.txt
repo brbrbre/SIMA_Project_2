@@ -1,0 +1,18 @@
+Comportamiento por clúster — morning_peak (k=5)
+============================================================
+
+- Cluster 0 (n=3659): Tráfico alto
+  NOX: alto, CO: alto, PM10: alto, PM2.5: alto, O3: bajo, NO: alto, NO2: alto, SO2: alto
+
+- Cluster 1 (n=3703): Mixto
+  NOX: medio, CO: medio, PM10: medio, PM2.5: medio, O3: medio, NO: medio, NO2: medio, SO2: medio
+
+- Cluster 2 (n=3759): Mixto
+  NOX: medio, CO: medio, PM10: medio, PM2.5: medio, O3: medio, NO: medio, NO2: medio, SO2: medio
+
+- Cluster 3 (n=3339): Ozono fotoquímico/industrias
+  NOX: bajo, CO: medio, PM10: medio, PM2.5: medio, O3: alto, NO: bajo, NO2: bajo, SO2: medio
+
+- Cluster 4 (n=1692): Mixto
+  NOX: medio, CO: bajo, PM10: bajo, PM2.5: bajo, O3: medio, NO: medio, NO2: medio, SO2: bajo
+

@@ -1,0 +1,7 @@
+group1,group2,meandiff,p-adj,lower,upper,reject
+evening_peak,midday,5.1406,0.0,4.6952,5.5861,True
+evening_peak,morning_peak,14.4966,0.0,14.0087,14.9845,True
+evening_peak,night,1.9044,0.0,1.4962,2.3126,True
+midday,morning_peak,9.356,0.0,8.9106,9.8013,True
+midday,night,-3.2362,0.0,-3.5925,-2.8799,True
+morning_peak,night,-12.5922,0.0,-13.0004,-12.184,True

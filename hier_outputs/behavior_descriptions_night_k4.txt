@@ -1,0 +1,15 @@
+Comportamiento por clúster — night (k=4)
+============================================================
+
+- Cluster 0 (n=16976): Mixto
+  NOX: bajo, CO: medio, PM10: medio, PM2.5: medio, O3: medio, NO: medio, NO2: bajo, SO2: medio
+
+- Cluster 1 (n=9351): Mixto
+  NOX: medio, CO: medio, PM10: medio, PM2.5: medio, O3: medio, NO: medio, NO2: medio, SO2: medio
+
+- Cluster 2 (n=7177): Tráfico alto
+  NOX: alto, CO: medio, PM10: alto, PM2.5: alto, O3: bajo, NO: alto, NO2: alto, SO2: medio
+
+- Cluster 3 (n=6876): Mixto
+  NOX: medio, CO: medio, PM10: medio, PM2.5: medio, O3: medio, NO: medio, NO2: medio, SO2: medio
+

@@ -1,0 +1,5 @@
+,NOX,NOX,CO,CO,PM10,PM10,PM2.5,PM2.5,O3,O3,NO,NO,NO2,NO2,SO2,SO2
+,median,mean,median,mean,median,mean,median,mean,median,mean,median,mean,median,mean,median,mean
+cluster,,,,,,,,,,,,,,,,
+0,38.1,47.844,1.53,1.635,71.0,82.434,22.0,25.078,13.0,19.276,12.3,20.812,24.3,27.056,4.0,4.829
+1,12.2,13.136,1.15,1.259,47.0,53.339,13.0,15.366,28.0,32.127,3.3,3.775,8.6,9.396,3.4,4.3

@@ -64,12 +64,12 @@ class TestDataIO(unittest.TestCase):
         
         # Verificar que todas las ventanas están asignadas
         windows = df_with_windows['time_window'].unique()
-        expected_windows = {'morning_peak', 'midday', 'evening_peak', 'night'}
+        expected_windows = {'Pico_Matutino', 'midday', 'evening_peak', 'night'}
         self.assertTrue(set(windows).issubset(expected_windows))
         
         # Verificar mapeos específicos de horas
         test_cases = [
-            (7, 'morning_peak'),   # 7 AM
+            (7, 'Pico_Matutino'),   # 7 AM
             (12, 'midday'),        # 12 PM
             (18, 'evening_peak'),  # 6 PM
             (23, 'night')          # 11 PM
@@ -98,10 +98,10 @@ class TestModels(unittest.TestCase):
             'PM10': np.random.uniform(20, 80, 1000),
             'PM2.5': np.random.uniform(10, 35, 1000),
             'SO2': np.random.uniform(0.002, 0.008, 1000),
-            'time_window': np.random.choice(['morning_peak', 'midday', 'evening_peak', 'night'], 1000)
+            'time_window': np.random.choice(['Pico_Matutino', 'midday', 'evening_peak', 'night'], 1000)
         })
         self.features = ['CO', 'NO', 'NO2', 'NOX', 'O3', 'PM10', 'PM2.5', 'SO2']
-        self.windows = ['morning_peak', 'midday', 'evening_peak', 'night']
+        self.windows = ['Pico_Matutino', 'midday', 'evening_peak', 'night']
     
     def tearDown(self):
         """Limpiar archivos temporales."""
@@ -206,14 +206,14 @@ class TestSimulation(unittest.TestCase):
         shuffled = ['PM10','CO','SO2','NOX','NO2','PM2.5','O3','NO']  # orden incorrecto
         x = {f: i+1 for i,f in enumerate(shuffled)}
         # simulate_scenario debe seguir `feats`, no el orden del dict
-        out = simulate_scenario('morning_peak', x, feats, model_dir=self.temp_dir)
+        out = simulate_scenario('Pico_Matutino', x, feats, model_dir=self.temp_dir)
         self.assertIn('cluster', out)  # si el orden fuera incorrecto, a menudo falla o se vuelve inestable
 
     def setUp(self):
         """Configurar entorno de prueba."""
         self.temp_dir = tempfile.mkdtemp()
         
-        # Crear y entrenar modelos simples para morning_peak
+        # Crear y entrenar modelos simples para Pico_Matutino
         test_df = pd.DataFrame({
             'CO': np.random.uniform(0.3, 1.2, 500),
             'NO': np.random.uniform(0.01, 0.05, 500),
@@ -223,16 +223,16 @@ class TestSimulation(unittest.TestCase):
             'PM10': np.random.uniform(20, 80, 500),
             'PM2.5': np.random.uniform(10, 35, 500),
             'SO2': np.random.uniform(0.002, 0.008, 500),
-            'time_window': ['morning_peak'] * 500
+            'time_window': ['Pico_Matutino'] * 500
         })
         
         self.features = ['CO', 'NO', 'NO2', 'NOX', 'O3', 'PM10', 'PM2.5', 'SO2']
         train_and_save_models(
             test_df,
-            ['morning_peak'],
+            ['Pico_Matutino'],
             self.features,
             out_dir=self.temp_dir,
-            k_by_window={'morning_peak': 3}
+            k_by_window={'Pico_Matutino': 3}
         )
     
     def tearDown(self):
@@ -245,7 +245,7 @@ class TestSimulation(unittest.TestCase):
         input_vector = [0.8, 0.03, 0.04, 0.07, 0.05, 60, 25, 0.005]
         
         result = simulate_scenario(
-            'morning_peak',
+            'Pico_Matutino',
             input_vector,
             self.features,
             model_dir=self.temp_dir
@@ -259,7 +259,7 @@ class TestSimulation(unittest.TestCase):
         self.assertIn('nearest_centroid', result)
         
         # Verificar tipos
-        self.assertEqual(result['window'], 'morning_peak')
+        self.assertEqual(result['window'], 'Pico_Matutino')
         self.assertIsInstance(result['cluster'], int)
         self.assertIsInstance(result['dist_to_centroid'], float)
         self.assertIsInstance(result['interpretation'], str)
@@ -281,7 +281,7 @@ class TestSimulation(unittest.TestCase):
         centroid_original = scaler.inverse_transform(centroid_scaled)[0]
         
         result = simulate_scenario(
-            'morning_peak',
+            'Pico_Matutino',
             centroid_original,
             self.features,
             model_dir=self.temp_dir
@@ -344,7 +344,7 @@ class TestInterpretation(unittest.TestCase):
         input_vals = {'NOX': 0.10, 'CO': 1.0}
         centroid_vals = {'NOX': 0.05, 'CO': 0.5}
         
-        interpretation = generate_interpretation('morning_peak', input_vals, centroid_vals)
+        interpretation = generate_interpretation('Pico_Matutino', input_vals, centroid_vals)
         
         self.assertIn('tráfico', interpretation.lower())
     
@@ -383,13 +383,13 @@ class TestAcceptanceCriteria(unittest.TestCase):
             'PM10': np.random.randn(100),
             'PM2.5': np.random.randn(100),
             'SO2': np.random.randn(100),
-            'time_window': ['morning_peak'] * 100
+            'time_window': ['Pico_Matutino'] * 100
         })
         
         features = ['CO', 'NO', 'NO2', 'NOX', 'O3', 'PM10', 'PM2.5', 'SO2']
         
         # Primer entrenamiento
-        train_and_save_models(test_df, ['morning_peak'], features, out_dir=temp_dir)
+        train_and_save_models(test_df, ['Pico_Matutino'], features, out_dir=temp_dir)
         
         # Verificar existencia de archivos
         self.assertTrue(os.path.exists(os.path.join(temp_dir, 'morning_peak_scaler.pkl')))
@@ -401,7 +401,7 @@ class TestAcceptanceCriteria(unittest.TestCase):
         # Reentrenar
         import time
         time.sleep(0.1)  # Asegurar timestamp distinto
-        train_and_save_models(test_df, ['morning_peak'], features, out_dir=temp_dir, force_retrain=True)
+        train_and_save_models(test_df, ['Pico_Matutino'], features, out_dir=temp_dir, force_retrain=True)
         
         # Verificar que se sobrescribieron los archivos
         second_mtime = os.path.getmtime(os.path.join(temp_dir, 'morning_peak_scaler.pkl'))
@@ -484,3 +484,60 @@ class TestAcceptanceCriteria(unittest.TestCase):
 if __name__ == '__main__':
     # Ejecutar pruebas
     unittest.main(verbosity=2)
+# gmm_no_fecha.py
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+from sklearn.preprocessing import PowerTransformer, StandardScaler
+from sklearn.mixture import GaussianMixture
+from sklearn.metrics import silhouette_score
+
+# === 1. Cargar datos ===
+df = pd.read_excel("Bases_Datos/f24_clean.xlsx")
+
+# Nos quedamos solo con las variables de contaminantes
+features = ["NOX","CO","PM10","PM2.5","O3"]
+X = df[features].dropna().values
+
+# === 2. Transformar datos ===
+pipe = [
+    ("power", PowerTransformer(method="yeo-johnson", standardize=False)),
+    ("scale", StandardScaler())
+]
+# aplicar manualmente
+pt = PowerTransformer(method="yeo-johnson", standardize=False)
+X_pt = pt.fit_transform(X)
+sc = StandardScaler()
+X_t = sc.fit_transform(X_pt)
+
+# === 3. Ajustar GMM ===
+# probamos varios Ks y elegimos por BIC
+n_components = range(2, 8)
+bics, models = [], []
+
+for k in n_components:
+    gmm = GaussianMixture(n_components=k, covariance_type="full", random_state=42)
+    gmm.fit(X_t)
+    bics.append(gmm.bic(X_t))
+    models.append(gmm)
+
+best_idx = np.argmin(bics)
+best_k = n_components[best_idx]
+best_model = models[best_idx]
+
+labels = best_model.predict(X_t)
+
+# === 4. Métricas ===
+sil = silhouette_score(X_t, labels) if len(np.unique(labels)) > 1 else np.nan
+print(f"Mejor número de clústeres: {best_k}")
+print(f"Silhouette: {sil:.3f}")
+
+# === 5. Gráfico rápido (2 variables) ===
+plt.figure(figsize=(7,5))
+plt.scatter(X_t[:,0], X_t[:,1], c=labels, cmap="tab10", s=10)
+plt.title(f"GMM con {best_k} clústeres (Silhouette={sil:.2f})")
+plt.xlabel("Componente 1 (transformado)")
+plt.ylabel("Componente 2 (transformado)")
+plt.colorbar(label="Cluster")
+plt.tight_layout()
+plt.show()
