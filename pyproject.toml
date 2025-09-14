@@ -1,0 +1,19 @@
+[project]
+name = "F2020"
+version = "0.1.0"
+description = "Paquete de apoyo para el curso F2020 Ecuaciones Diferenciales para la Física"
+authors = [
+  { name = "Raul Gomez", email = "rgomez@tec.mx" }
+]
+requires-python = ">=3.11,<3.12"
+
+dependencies = [
+  "numpy",
+  "matplotlib",
+  "scipy",
+  "pandas",
+  "streamlit",
+  "scikit-learn",
+  "plotly",
+  "requests"
+]
