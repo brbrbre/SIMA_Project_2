@@ -386,9 +386,22 @@ def _centroid_from_bounds(bounds: dict) -> dict:
         center[k] = (lo + hi) / 2.0
     return center
 
-# -------------------------------------------------------------------
-# NUEVA INTERPRETACIÓN CON RECOMENDACIONES (tu estilo anterior)
-# -------------------------------------------------------------------
+# 🔧 FIX: reemplaza tu función `generate_interpretation(...)` por ESTA versión
+# Evita el TypeError al intentar float(Timestamp) u otros campos no numéricos.
+# Solo usa contaminantes numéricos (CO, NO, NO2, NOX, O3, PM10, PM2.5, SO2) para
+# calcular desviaciones, drivers y recomendaciones.
+
+from math import isfinite
+
+POLLUTANTS = ['CO','NO','NO2','NOX','O3','PM10','PM2.5','SO2']
+
+def _to_float_or_none(x):
+    try:
+        v = float(x)
+        return v if isfinite(v) else None
+    except Exception:
+        return None
+
 def generate_interpretation(window: str,
                             sample: dict,
                             centroid: dict,
@@ -398,30 +411,41 @@ def generate_interpretation(window: str,
     1) Etiqueta del patrón (y clasificación si existe)
     2) Por qué lo creemos (desviaciones vs. referencia/centroide)
     3) Qué hacer ahora (acciones accionables, sensibles a la ventana)
+    (Seguro ante columnas no numéricas como 'date', 'station', etc.)
     """
-    # 1) nombres "bonitos" con citas abreviadas
+    # Nombres "bonitos"
     nice = {
         'CO':   'monóxido de carbono (escape vehicular) (EPA, 2023)',
         'NO':   'óxido nítrico (emisión fresca de tráfico) (EPA, 2023)',
         'NO2':  'dióxido de nitrógeno (tráfico/combustión) (EPA, 2023)',
-        'NOX':  'NOx (mezcla de NO y NO2 de tráfico) (EPA, 2023)',
+        'NOX':  'NOx (mezcla de tráfico) (EPA, 2023)',
         'O3':   'ozono (fotoquímica sol + precursores) (WHO, 2021)',
         'PM10': 'PM10 (polvo grueso) (WHO, 2021)',
-        'PM2.5':'PM2.5 (partículas finas; salud) (WHO, 2021)',
-        'SO2':  'dióxido de azufre (combustibles/industrial) (EPA, 2023)'
+        'PM2.5':'PM2.5 (partículas finas) (WHO, 2021)',
+        'SO2':  'dióxido de azufre (industrial/combustibles) (EPA, 2023)'
     }
 
-    # 2) desviaciones relativas vs. "centroide" de referencia
-    deltas = {}
-    for k in centroid.keys():
-        c = float(centroid[k])
-        s = float(sample.get(k, c))
-        deltas[k] = 0.0 if c == 0 else (s - c) / abs(c)
+    # Filtrar a contaminantes y a valores realmente numéricos
+    s_num = {k: _to_float_or_none(sample.get(k))   for k in POLLUTANTS}
+    c_num = {k: _to_float_or_none(centroid.get(k)) for k in POLLUTANTS}
+    keys  = [k for k in POLLUTANTS if (s_num.get(k) is not None and c_num.get(k) is not None)]
+    if not keys:  # fallback: si no hay centroide válido, usa lo que haya en sample
+        keys = [k for k in POLLUTANTS if s_num.get(k) is not None]
 
-    # 3) drivers (2-3 mayores desviaciones absolutas)
+    # Desviaciones relativas
+    deltas = {}
+    for k in keys:
+        c = c_num.get(k)
+        s = s_num.get(k, c)
+        if c is None or c == 0:
+            deltas[k] = 0.0
+        else:
+            deltas[k] = (s - c) / abs(c)
+
+    # Top drivers (2–3)
     drivers = sorted(deltas.items(), key=lambda kv: abs(kv[1]), reverse=True)[:3]
 
-    # 4) etiqueta por ventana + pistas (y reforzar con class_name si lo hay)
+    # Etiqueta por ventana + refuerzo por class_name
     label = "condiciones típicas"
     if window in ("morning_peak", "evening_peak"):
         if deltas.get('NOX', 0) > 0.20 or deltas.get('CO', 0) > 0.20:
@@ -433,10 +457,9 @@ def generate_interpretation(window: str,
             label = "día dominado por partículas suspendidas"
     if deltas.get('PM2.5', 0) > 0.25 and deltas.get('PM10', 0) > 0.15:
         label = "carga elevada de material particulado"
-    if all(abs(v) < 0.10 for v in deltas.values()):
+    if keys and all(abs(deltas[k]) < 0.10 for k in keys):
         label = "niveles cercanos a lo normal"
 
-    # refuerzo por nombre de clase si está disponible
     if class_name:
         if "Tráfico" in class_name:
             label = "pico impulsado por emisiones vehiculares"
@@ -447,15 +470,19 @@ def generate_interpretation(window: str,
         elif "Baja Contaminación" in class_name:
             label = "niveles bajos con ozono medio (transición)"
 
-    # 5) narrativa "por qué"
+    # Narrativa "por qué"
     def pct(x: float) -> str:
         return f"{x*100:.0f}%"
-    why_bits = []
-    for k, v in drivers:
-        direction = "más alto" if v > 0 else "más bajo"
-        why_bits.append(f"{nice.get(k, k)} está {direction} que lo usual por ~{pct(abs(v))}")
+    if drivers:
+        why_bits = []
+        for k, v in drivers:
+            direction = "más alto" if v > 0 else "más bajo"
+            why_bits.append(f"{nice.get(k, k)} está {direction} que lo usual por ~{pct(abs(v))}")
+        why_txt = "; ".join(why_bits) + "."
+    else:
+        why_txt = "Los indicadores disponibles no muestran desviaciones significativas."
 
-    # 6) acciones (sensibles a ventana + label)
+    # Acciones
     actions = []
     if "emisiones vehiculares" in label:
         if window == "morning_peak":
@@ -471,7 +498,7 @@ def generate_interpretation(window: str,
             ]
     if "ozono" in label:
         actions += [
-            "Reducir uso de solventes/pinturas al mediodía; programar en mañana/tarde. (WHO, 2021)",
+            "Reducir uso de solventes/pinturas al mediodía; programar mañana/tarde. (WHO, 2021)",
             "Promover TP/teletrabajo en días soleados 12–16 h. (WHO, 2021)"
         ]
     if "partículas" in label or "material particulado" in label:
@@ -485,7 +512,7 @@ def generate_interpretation(window: str,
     narrative = (
         (f"**Clasificación:** {class_name}\n\n" if class_name else "") +
         f"Patrón: **{label}** durante **{window.replace('_',' ')}**.\n\n"
-        f"Por qué lo creemos: " + "; ".join(why_bits) + ".\n\n"
+        f"Por qué lo creemos: {why_txt}\n\n"
         "Qué hacer ahora:\n- " + "\n- ".join(actions)
     )
 
@@ -493,10 +520,11 @@ def generate_interpretation(window: str,
         "\n\n**Referencias:**\n"
         "- U.S. Environmental Protection Agency. (2023). *Criteria air pollutants*. https://www.epa.gov/criteria-air-pollutants\n"
         "- World Health Organization. (2021). *WHO global air quality guidelines*. https://iris.who.int/bitstream/handle/10665/345329/9789240034228-eng.pdf\n"
-        "- Molina, L. T., Velasco, E., Retama, A., & Zavala, M. (2007). Air quality management in Mexico. *JAWMA*, 57(12), 1465–1475. https://doi.org/10.3155/1047-3289.57.12.1465\n"
+        "- Molina, L. T., Velasco, E., Retama, A., & Zavala, M. (2007). *JAWMA*, 57(12), 1465–1475. https://doi.org/10.3155/1047-3289.57.12.1465\n"
         "- International Transport Forum. (2017). *Air pollution mitigation strategy for Mexico City*. https://www.itf-oecd.org/sites/default/files/docs/air-pollution-mitigation-strategy-mexico-city.pdf"
     )
     return narrative + references
+
 
 # -------------------------------------------------------------------
 # NUEVO simulate_scenario: usa reglas + aproximación + centroide por rangos
